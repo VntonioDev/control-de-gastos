@@ -7,11 +7,13 @@ import BottomNav from '../components/BottomNav.astro';
   <header>
     <div class="user-info">
       <div class="avatar">
-        <img src="https://i.pravatar.cc/150?img=11" alt="User Avatar" />
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white" style="width: 24px; height: 24px; margin: 8px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
       </div>
       <div>
         <div class="greeting">Buenos días,</div>
-        <div class="name">Jose</div>
+        <div class="name" id="userNameDisplay">Cargando...</div>
       </div>
     </div>
   </header>
@@ -59,21 +61,21 @@ import BottomNav from '../components/BottomNav.astro';
         </div>
         <div class="action-label">Recibir</div>
       </button>
-      <button class="action-item">
+      <button class="action-item" onclick="window.location.href='/analisis'">
         <div class="action-icon">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 24px; height: 24px;">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
           </svg>
         </div>
-        <div class="action-label">Tarjetas</div>
+        <div class="action-label">Análisis</div>
       </button>
-      <button class="action-item">
+      <button class="action-item" onclick="window.location.href='/perfil'">
         <div class="action-icon">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 24px; height: 24px;">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
           </svg>
         </div>
-        <div class="action-label">Más</div>
+        <div class="action-label">Perfil</div>
       </button>
     </div>
 
@@ -82,7 +84,7 @@ import BottomNav from '../components/BottomNav.astro';
     </div>
 
     <div class="transaction-list" id="transaction-list">
-      <div class="empty-state">Cargando transacciones desde Firebase...</div>
+      <div class="empty-state">Cargando transacciones...</div>
     </div>
   </main>
 
@@ -112,6 +114,18 @@ import BottomNav from '../components/BottomNav.astro';
         </div>
 
         <div class="form-group">
+          <label class="form-label">Categoría</label>
+          <select class="form-input" id="txCategory" required style="appearance: none; padding-right: 32px; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 16px auto;">
+            <option value="Alimentación" style="color: black;">Alimentación</option>
+            <option value="Transporte" style="color: black;">Transporte</option>
+            <option value="Ocio" style="color: black;">Ocio</option>
+            <option value="Servicios" style="color: black;">Servicios</option>
+            <option value="Salud" style="color: black;">Salud</option>
+            <option value="Otros" style="color: black;">Otros</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label class="form-label">Monto</label>
           <input type="number" class="form-input" id="txAmount" placeholder="0.00" step="0.01" min="0.01" required>
         </div>
@@ -123,10 +137,12 @@ import BottomNav from '../components/BottomNav.astro';
 </Layout>
 
 <script>
-  import { transactionsCol, addTransaction, deleteTransactionDb, onSnapshot, query, orderBy } from '../lib/firebase.js';
+  import { auth, transactionsCol, addTransaction, deleteTransactionDb, onSnapshot, query, where } from '../lib/firebase.js';
 
   let currentType = 'expense';
   let transactions = [];
+  let currentUser = null;
+  let unsubscribeSnapshot = null;
 
   const listEl = document.getElementById('transaction-list');
   const balanceEl = document.getElementById('total-balance');
@@ -141,6 +157,7 @@ import BottomNav from '../components/BottomNav.astro';
   const typeBtns = document.querySelectorAll('.type-btn');
   const btnIncomeType = document.querySelector('.type-btn.income');
   const submitBtn = document.getElementById('submitBtn');
+  const userNameDisplay = document.getElementById('userNameDisplay');
 
   const formatCurrency = (amount) => '$' + Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -184,7 +201,7 @@ import BottomNav from '../components/BottomNav.astro';
           </div>
           <div class="tx-details">
             <div class="tx-title">${tx.title}</div>
-            <div class="tx-date">${tx.date}</div>
+            <div class="tx-date">${tx.date} • ${tx.category}</div>
           </div>
         </div>
         <div class="tx-amount ${isPositive ? 'positive' : ''}" style="${isPositive ? 'color: var(--positive);' : ''}">
@@ -196,22 +213,31 @@ import BottomNav from '../components/BottomNav.astro';
     });
   };
 
-  // Escuchar cambios de Firebase en tiempo real
-  const q = query(transactionsCol, orderBy("createdAt", "desc"));
-  onSnapshot(q, (snapshot) => {
-    transactions = [];
-    snapshot.forEach((doc) => {
-      transactions.push({ id: doc.id, ...doc.data() });
+  const loadUserData = (user) => {
+    currentUser = user;
+    userNameDisplay.textContent = user.email.split('@')[0];
+
+    if (unsubscribeSnapshot) unsubscribeSnapshot();
+
+    // Consultar solo las transacciones de ESTE usuario
+    const q = query(transactionsCol, where("userId", "==", user.uid));
+    unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+      transactions = [];
+      snapshot.forEach((doc) => {
+        transactions.push({ id: doc.id, ...doc.data() });
+      });
+      // Ordenar localmente por fecha (de más reciente a más antigua)
+      transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      updateUI();
+    }, (error) => {
+      console.error("Error al escuchar Firebase:", error);
+      alert("Error de permisos o conexión. Revisa las Reglas de Firestore.");
     });
-    updateUI();
-  }, (error) => {
-    console.error("Error al escuchar Firebase:", error);
-    if (error.code === 'permission-denied') {
-      alert("Error de Permisos: Firebase está bloqueando la lectura. Por favor, ve a Firestore Database -> Reglas y pon 'allow read, write: if true;'");
-    } else if (error.code === 'failed-precondition' && error.message.includes('index')) {
-      alert("Falta crear un índice en Firebase. Por favor, revisa la consola de tu navegador para obtener el enlace de creación.");
-    } else {
-      alert("Error de Firebase: " + error.message);
+  };
+
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      loadUserData(user);
     }
   });
 
@@ -240,15 +266,37 @@ import BottomNav from '../components/BottomNav.astro';
       typeBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentType = btn.dataset.type;
+      
+      const catSelect = document.getElementById('txCategory');
+      if (currentType === 'income') {
+        catSelect.innerHTML = `
+          <option value="Salario" style="color: black;">Salario</option>
+          <option value="Regalo" style="color: black;">Regalo</option>
+          <option value="Inversión" style="color: black;">Inversión</option>
+          <option value="Otros" style="color: black;">Otros</option>
+        `;
+      } else {
+        catSelect.innerHTML = `
+          <option value="Alimentación" style="color: black;">Alimentación</option>
+          <option value="Transporte" style="color: black;">Transporte</option>
+          <option value="Ocio" style="color: black;">Ocio</option>
+          <option value="Servicios" style="color: black;">Servicios</option>
+          <option value="Salud" style="color: black;">Salud</option>
+          <option value="Otros" style="color: black;">Otros</option>
+        `;
+      }
     });
   });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!currentUser) return;
+
     submitBtn.disabled = true;
     submitBtn.textContent = 'Guardando...';
     
     const title = document.getElementById('txTitle').value;
+    const category = document.getElementById('txCategory').value;
     const amountVal = parseFloat(document.getElementById('txAmount').value);
     
     if (!title || isNaN(amountVal)) {
@@ -259,8 +307,10 @@ import BottomNav from '../components/BottomNav.astro';
 
     const newTx = {
       title,
+      category,
       amount: currentType === 'expense' ? -amountVal : amountVal,
-      date: getFormattedDate()
+      date: getFormattedDate(),
+      userId: currentUser.uid
     };
 
     await addTransaction(newTx);

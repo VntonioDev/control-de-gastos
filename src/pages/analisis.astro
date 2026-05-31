@@ -8,7 +8,7 @@ import BottomNav from '../components/BottomNav.astro';
     <div class="user-info">
       <div>
         <div class="name">Análisis</div>
-        <div class="greeting">Resumen de tus finanzas</div>
+        <div class="greeting">Desglose de tus finanzas</div>
       </div>
     </div>
   </header>
@@ -16,7 +16,7 @@ import BottomNav from '../components/BottomNav.astro';
   <main class="main-content">
     
     <div class="balance-card" style="margin-top: 0;">
-      <div class="balance-label">Resumen Global</div>
+      <div class="balance-label">Gastos por Categoría</div>
       <div style="height: 220px; width: 100%; position: relative; margin-top: 16px;">
         <canvas id="myChart"></canvas>
         <div id="chartLoading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.7); font-size: 0.9rem;">
@@ -26,18 +26,11 @@ import BottomNav from '../components/BottomNav.astro';
     </div>
 
     <div class="section-header" style="margin-top: 24px;">
-      <h2 class="section-title">Estadísticas</h2>
+      <h2 class="section-title">Detalle</h2>
     </div>
 
-    <div style="display: flex; gap: 16px; margin-bottom: 24px;">
-      <div class="stat" style="border-bottom: 3px solid var(--positive);">
-        <div class="stat-label">Total Ingresos</div>
-        <div class="stat-amount" id="stat-income" style="color: var(--positive);">$0.00</div>
-      </div>
-      <div class="stat" style="border-bottom: 3px solid var(--negative);">
-        <div class="stat-label">Total Gastos</div>
-        <div class="stat-amount" id="stat-expense" style="color: var(--negative);">$0.00</div>
-      </div>
+    <div class="transaction-list" id="category-list">
+      <!-- Se llenará dinámicamente -->
     </div>
 
   </main>
@@ -47,20 +40,59 @@ import BottomNav from '../components/BottomNav.astro';
   <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <script>
-    import { transactionsCol, onSnapshot, query, orderBy } from '../lib/firebase.js';
+    import { auth, transactionsCol, onSnapshot, query, where } from '../lib/firebase.js';
 
-    const incomeEl = document.getElementById('stat-income');
-    const expenseEl = document.getElementById('stat-expense');
     const chartLoading = document.getElementById('chartLoading');
+    const categoryList = document.getElementById('category-list');
     
     let chartInstance = null;
 
     const formatCurrency = (amount) => '$' + Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const updateChart = (income, expense) => {
-      chartLoading.style.display = 'none';
-      const ctx = document.getElementById('myChart');
+    const chartColors = [
+      '#ef4444', // Alimentación (rojo)
+      '#f59e0b', // Transporte (naranja)
+      '#3b82f6', // Ocio (azul)
+      '#8b5cf6', // Servicios (morado)
+      '#10b981', // Salud (verde)
+      '#64748b'  // Otros (gris)
+    ];
 
+    const updateChartAndList = (categoryTotals) => {
+      chartLoading.style.display = 'none';
+      categoryList.innerHTML = '';
+
+      const labels = Object.keys(categoryTotals);
+      const data = Object.values(categoryTotals);
+
+      if (labels.length === 0) {
+        chartLoading.style.display = 'block';
+        chartLoading.textContent = "No hay gastos aún.";
+        return;
+      }
+
+      // Rellenar lista
+      labels.forEach((label, i) => {
+        const div = document.createElement('div');
+        div.className = 'transaction-item';
+        div.innerHTML = `
+          <div class="tx-left">
+            <div class="tx-icon" style="background-color: ${chartColors[i % chartColors.length]}33">
+              <div style="width: 16px; height: 16px; border-radius: 50%; background-color: ${chartColors[i % chartColors.length]};"></div>
+            </div>
+            <div class="tx-details">
+              <div class="tx-title">${label}</div>
+            </div>
+          </div>
+          <div class="tx-amount negative" style="color: var(--negative);">
+            -${formatCurrency(data[i])}
+          </div>
+        `;
+        categoryList.appendChild(div);
+      });
+
+      // Actualizar gráfico
+      const ctx = document.getElementById('myChart');
       if (chartInstance) {
         chartInstance.destroy();
       }
@@ -68,13 +100,10 @@ import BottomNav from '../components/BottomNav.astro';
       chartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: ['Ingresos', 'Gastos'],
+          labels: labels,
           datasets: [{
-            data: [income, expense],
-            backgroundColor: [
-              '#10b981', // positive
-              '#ef4444'  // negative
-            ],
+            data: data,
+            backgroundColor: chartColors.slice(0, labels.length),
             borderWidth: 0,
             hoverOffset: 4
           }]
@@ -85,13 +114,12 @@ import BottomNav from '../components/BottomNav.astro';
           cutout: '75%',
           plugins: {
             legend: {
-              position: 'bottom',
+              position: 'right',
               labels: {
                 color: 'rgba(255, 255, 255, 0.8)',
-                font: {
-                  family: "'Outfit', sans-serif"
-                },
-                padding: 20
+                font: { family: "'Outfit', sans-serif" },
+                padding: 10,
+                boxWidth: 12
               }
             }
           }
@@ -99,28 +127,27 @@ import BottomNav from '../components/BottomNav.astro';
       });
     };
 
-    // Escuchar Firebase
-    const q = query(transactionsCol, orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot) => {
-      let totalIncome = 0;
-      let totalExpense = 0;
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        const q = query(transactionsCol, where("userId", "==", user.uid));
+        onSnapshot(q, (snapshot) => {
+          const categoryTotals = {};
 
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.amount > 0) {
-          totalIncome += data.amount;
-        } else {
-          totalExpense += Math.abs(data.amount);
-        }
-      });
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            // Solo analizamos gastos (amount < 0)
+            if (data.amount < 0) {
+              const cat = data.category || 'Otros';
+              categoryTotals[cat] = (categoryTotals[cat] || 0) + Math.abs(data.amount);
+            }
+          });
 
-      incomeEl.textContent = formatCurrency(totalIncome);
-      expenseEl.textContent = formatCurrency(totalExpense);
-
-      updateChart(totalIncome, totalExpense);
-    }, (error) => {
-      console.error(error);
-      chartLoading.textContent = "Error al cargar datos";
+          updateChartAndList(categoryTotals);
+        }, (error) => {
+          console.error(error);
+          chartLoading.textContent = "Error al cargar datos";
+        });
+      }
     });
 
   </script>

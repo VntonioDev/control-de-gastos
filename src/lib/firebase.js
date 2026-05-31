@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, query, orderBy } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, query, where, orderBy } from "firebase/firestore";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAItrL00LQ-n98MnovYhqmrgSWhlGcKqgU",
@@ -13,6 +14,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 
 // Colección principal
 export const transactionsCol = collection(db, "transactions");
@@ -43,5 +45,6 @@ export const deleteTransactionDb = async (id) => {
   }
 };
 
-// Exportamos query y orderBy para poder escuchar los cambios en tiempo real
-export { onSnapshot, query, orderBy };
+// Exportamos utilidades para escuchar los cambios
+export { onSnapshot, query, where, orderBy };
+export { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged };

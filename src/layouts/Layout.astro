@@ -505,8 +505,25 @@ const { title } = Astro.props;
 		</style>
 	</head>
 	<body>
-		<div class="app-container">
+		<div class="app-container" id="app-container" style="display: none;">
 			<slot />
 		</div>
+		
+		<script>
+			import { auth, onAuthStateChanged } from '../lib/firebase.js';
+			
+			const isLogin = window.location.pathname === '/login';
+			const appContainer = document.getElementById('app-container');
+
+			onAuthStateChanged(auth, (user) => {
+				if (!user && !isLogin) {
+					window.location.href = '/login';
+				} else if (user && isLogin) {
+					window.location.href = '/';
+				} else {
+					appContainer.style.display = 'block'; // Mostrar la app solo cuando sabemos el estado para evitar parpadeos
+				}
+			});
+		</script>
 	</body>
 </html>

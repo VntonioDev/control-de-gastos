@@ -1,0 +1,86 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Iniciar Sesión | Control de Gastos">
+  <main class="main-content" style="display: flex; flex-direction: column; justify-content: center; min-height: 100vh; padding-bottom: 0;">
+    <div style="text-align: center; margin-bottom: 40px;">
+      <div class="avatar" style="width: 80px; height: 80px; margin: 0 auto 16px; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="white" style="width: 40px; height: 40px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h1 style="font-size: 2rem; font-weight: 700;">Bienvenido</h1>
+      <p style="color: var(--text-secondary); margin-top: 8px;">Inicia sesión para gestionar tus gastos</p>
+    </div>
+
+    <form id="authForm" style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 32px 24px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+      <div class="form-group">
+        <label class="form-label">Correo electrónico</label>
+        <input type="email" class="form-input" id="email" placeholder="tu@correo.com" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 32px;">
+        <label class="form-label">Contraseña</label>
+        <input type="password" class="form-input" id="password" placeholder="••••••••" required minlength="6">
+      </div>
+
+      <div id="errorMsg" style="color: var(--negative); font-size: 0.9rem; margin-bottom: 16px; text-align: center; display: none;"></div>
+
+      <button type="submit" class="submit-btn" id="loginBtn">Iniciar Sesión</button>
+      
+      <div style="text-align: center; margin-top: 16px;">
+        <button type="button" id="registerBtn" style="background: none; border: none; color: var(--text-secondary); font-family: inherit; font-size: 0.9rem; cursor: pointer; text-decoration: underline;">
+          ¿No tienes cuenta? Regístrate
+        </button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    import { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from '../lib/firebase.js';
+
+    const form = document.getElementById('authForm');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    const errorMsg = document.getElementById('errorMsg');
+
+    let isLoginMode = true;
+
+    registerBtn.addEventListener('click', () => {
+      isLoginMode = !isLoginMode;
+      if (isLoginMode) {
+        loginBtn.textContent = 'Iniciar Sesión';
+        registerBtn.textContent = '¿No tienes cuenta? Regístrate';
+      } else {
+        loginBtn.textContent = 'Crear Cuenta';
+        registerBtn.textContent = '¿Ya tienes cuenta? Inicia sesión';
+      }
+      errorMsg.style.display = 'none';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Cargando...';
+      errorMsg.style.display = 'none';
+
+      try {
+        if (isLoginMode) {
+          await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+        } else {
+          await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+        }
+        window.location.href = '/';
+      } catch (error) {
+        console.error(error);
+        errorMsg.textContent = error.message;
+        errorMsg.style.display = 'block';
+        loginBtn.textContent = isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta';
+        loginBtn.disabled = false;
+      }
+    });
+  </script>
+</Layout>
