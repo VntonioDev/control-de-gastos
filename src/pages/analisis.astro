@@ -1,0 +1,127 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BottomNav from '../components/BottomNav.astro';
+---
+
+<Layout title="Análisis | Control de Gastos">
+  <header>
+    <div class="user-info">
+      <div>
+        <div class="name">Análisis</div>
+        <div class="greeting">Resumen de tus finanzas</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    
+    <div class="balance-card" style="margin-top: 0;">
+      <div class="balance-label">Resumen Global</div>
+      <div style="height: 220px; width: 100%; position: relative; margin-top: 16px;">
+        <canvas id="myChart"></canvas>
+        <div id="chartLoading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.7); font-size: 0.9rem;">
+          Cargando datos...
+        </div>
+      </div>
+    </div>
+
+    <div class="section-header" style="margin-top: 24px;">
+      <h2 class="section-title">Estadísticas</h2>
+    </div>
+
+    <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+      <div class="stat" style="border-bottom: 3px solid var(--positive);">
+        <div class="stat-label">Total Ingresos</div>
+        <div class="stat-amount" id="stat-income" style="color: var(--positive);">$0.00</div>
+      </div>
+      <div class="stat" style="border-bottom: 3px solid var(--negative);">
+        <div class="stat-label">Total Gastos</div>
+        <div class="stat-amount" id="stat-expense" style="color: var(--negative);">$0.00</div>
+      </div>
+    </div>
+
+  </main>
+
+  <BottomNav currentPath="/analisis" />
+
+  <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <script>
+    import { transactionsCol, onSnapshot, query, orderBy } from '../lib/firebase.js';
+
+    const incomeEl = document.getElementById('stat-income');
+    const expenseEl = document.getElementById('stat-expense');
+    const chartLoading = document.getElementById('chartLoading');
+    
+    let chartInstance = null;
+
+    const formatCurrency = (amount) => '$' + Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const updateChart = (income, expense) => {
+      chartLoading.style.display = 'none';
+      const ctx = document.getElementById('myChart');
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Ingresos', 'Gastos'],
+          datasets: [{
+            data: [income, expense],
+            backgroundColor: [
+              '#10b981', // positive
+              '#ef4444'  // negative
+            ],
+            borderWidth: 0,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '75%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: 'rgba(255, 255, 255, 0.8)',
+                font: {
+                  family: "'Outfit', sans-serif"
+                },
+                padding: 20
+              }
+            }
+          }
+        }
+      });
+    };
+
+    // Escuchar Firebase
+    const q = query(transactionsCol, orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
+      let totalIncome = 0;
+      let totalExpense = 0;
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.amount > 0) {
+          totalIncome += data.amount;
+        } else {
+          totalExpense += Math.abs(data.amount);
+        }
+      });
+
+      incomeEl.textContent = formatCurrency(totalIncome);
+      expenseEl.textContent = formatCurrency(totalExpense);
+
+      updateChart(totalIncome, totalExpense);
+    }, (error) => {
+      console.error(error);
+      chartLoading.textContent = "Error al cargar datos";
+    });
+
+  </script>
+</Layout>
