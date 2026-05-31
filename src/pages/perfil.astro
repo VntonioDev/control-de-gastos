@@ -22,11 +22,18 @@ import BottomNav from '../components/BottomNav.astro';
       <h2 id="profileName" style="font-size: 1.5rem; font-weight: 600;">Cargando...</h2>
       <p id="profileEmail" style="color: var(--text-secondary); margin-bottom: 32px;">...</p>
 
-      <button style="background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-primary); padding: 16px 32px; border-radius: 16px; cursor: pointer; width: 100%; margin-bottom: 16px; transition: background 0.2s ease;">
-        Ajustes de la cuenta (Próximamente)
+      <button id="settingsBtn" style="background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-primary); padding: 16px 32px; border-radius: 16px; cursor: pointer; width: 100%; margin-bottom: 16px; transition: background 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        Ajustes de la cuenta
       </button>
 
-      <button id="logoutBtn" style="background: rgba(239, 68, 68, 0.2); border: 1px solid var(--negative); color: var(--negative); padding: 16px 32px; border-radius: 16px; cursor: pointer; width: 100%; transition: background 0.2s ease;">
+      <button id="logoutBtn" style="background: rgba(239, 68, 68, 0.2); border: 1px solid var(--negative); color: var(--negative); padding: 16px 32px; border-radius: 16px; cursor: pointer; width: 100%; transition: background 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+        </svg>
         Cerrar Sesión
       </button>
     </div>
@@ -34,17 +41,62 @@ import BottomNav from '../components/BottomNav.astro';
 
   <BottomNav currentPath="/perfil" />
 
+  <!-- Modal de Ajustes -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Ajustes</h3>
+        <button class="close-btn" id="closeSettingsBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 24px; height: 24px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Nombre a mostrar</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" class="form-input" id="profileNameInput" placeholder="Tu nombre">
+          <button id="updateNameBtn" style="background: var(--accent); color: white; border: none; padding: 0 16px; border-radius: 12px; font-weight: 600; cursor: pointer;">Guardar</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--card-border);">
+        <h4 style="color: var(--negative); margin-bottom: 8px;">Zona de Peligro</h4>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">Eliminar todas tus transacciones de forma permanente. Esta acción no se puede deshacer.</p>
+        <button id="deleteAllBtn" style="background: rgba(239, 68, 68, 0.2); border: 1px solid var(--negative); color: var(--negative); padding: 12px 24px; border-radius: 12px; cursor: pointer; width: 100%; font-weight: 600;">
+          Borrar todos mis datos
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    import { auth, signOut } from '../lib/firebase.js';
+    import { auth, signOut, db } from '../lib/firebase.js';
+    import { updateProfile } from "firebase/auth";
+    import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
 
     const profileName = document.getElementById('profileName');
     const profileEmail = document.getElementById('profileEmail');
     const logoutBtn = document.getElementById('logoutBtn');
+    
+    // Modal elements
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const profileNameInput = document.getElementById('profileNameInput');
+    const updateNameBtn = document.getElementById('updateNameBtn');
+    const deleteAllBtn = document.getElementById('deleteAllBtn');
+
+    let currentUser = null;
 
     auth.onAuthStateChanged((user) => {
       if (user) {
-        profileName.textContent = user.displayName || user.email.split('@')[0];
+        currentUser = user;
+        const displayName = user.displayName || user.email.split('@')[0];
+        profileName.textContent = displayName;
         profileEmail.textContent = user.email;
+        profileNameInput.value = user.displayName || '';
       }
     });
 
@@ -56,5 +108,66 @@ import BottomNav from '../components/BottomNav.astro';
         console.error("Error al cerrar sesión:", error);
       }
     });
+
+    // Ajustes
+    settingsBtn.addEventListener('click', () => {
+      settingsModal.classList.add('active');
+    });
+
+    closeSettingsBtn.addEventListener('click', () => {
+      settingsModal.classList.remove('active');
+    });
+
+    updateNameBtn.addEventListener('click', async () => {
+      if (!currentUser) return;
+      const newName = profileNameInput.value.trim();
+      if (!newName) return;
+
+      updateNameBtn.textContent = '...';
+      updateNameBtn.disabled = true;
+
+      try {
+        await updateProfile(currentUser, { displayName: newName });
+        profileName.textContent = newName;
+        alert("Nombre actualizado correctamente.");
+      } catch (error) {
+        console.error(error);
+        alert("Error al actualizar el nombre.");
+      }
+
+      updateNameBtn.textContent = 'Guardar';
+      updateNameBtn.disabled = false;
+    });
+
+    deleteAllBtn.addEventListener('click', async () => {
+      if (!currentUser) return;
+      
+      const confirmDelete = confirm("¿Estás 100% seguro de que quieres borrar TODOS tus datos? Se perderá todo tu historial.");
+      if (!confirmDelete) return;
+
+      deleteAllBtn.textContent = 'Borrando...';
+      deleteAllBtn.disabled = true;
+
+      try {
+        const q = query(collection(db, "transactions"), where("userId", "==", currentUser.uid));
+        const snapshot = await getDocs(q);
+        
+        const deletePromises = [];
+        snapshot.forEach((document) => {
+          deletePromises.push(deleteDoc(doc(db, "transactions", document.id)));
+        });
+
+        await Promise.all(deletePromises);
+        alert("Todos tus datos han sido eliminados.");
+        settingsModal.classList.remove('active');
+      } catch (error) {
+        console.error(error);
+        alert("Error al borrar los datos.");
+      }
+
+      deleteAllBtn.textContent = 'Borrar todos mis datos';
+      deleteAllBtn.disabled = false;
+    });
+
   </script>
 </Layout>
