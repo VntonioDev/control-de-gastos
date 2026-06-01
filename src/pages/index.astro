@@ -352,6 +352,7 @@ import BottomNav from '../components/BottomNav.astro';
       const defaultAccId = allAccounts[0].id;
 
       displayedTransactions.forEach(t => {
+        if (t.accountId === 'none') return; // Explícitamente no afectar ninguna cuenta
         let accId = (t.accountId && accountsBalance[t.accountId]) ? t.accountId : defaultAccId;
         accountsBalance[accId].balance += t.amount;
       });
@@ -417,16 +418,18 @@ import BottomNav from '../components/BottomNav.astro';
 
     // Actualizar select de cuentas en modal de transacciones
     const currentTxAcc = txAccountSelect.value;
-    txAccountSelect.innerHTML = '';
-    if (allAccounts.length === 0) {
-      txAccountSelect.innerHTML += `<option value="principal" style="color: black;">Sin Cuenta</option>`;
-    } else {
-      allAccounts.forEach(acc => {
-        txAccountSelect.innerHTML += `<option value="${acc.id}" style="color: black;">${acc.name}</option>`;
-      });
-    }
-    if (currentTxAcc && allAccounts.some(a => a.id === currentTxAcc)) {
+    txAccountSelect.innerHTML = `<option value="none" style="color: black;">Ninguna (Solo registrar)</option>`;
+    
+    allAccounts.forEach(acc => {
+      txAccountSelect.innerHTML += `<option value="${acc.id}" style="color: black;">${acc.name}</option>`;
+    });
+
+    if (currentTxAcc && (currentTxAcc === 'none' || allAccounts.some(a => a.id === currentTxAcc))) {
       txAccountSelect.value = currentTxAcc;
+    } else if (allAccounts.length > 0) {
+      txAccountSelect.value = allAccounts[0].id;
+    } else {
+      txAccountSelect.value = 'none';
     }
 
     listEl.innerHTML = '';
@@ -612,12 +615,14 @@ import BottomNav from '../components/BottomNav.astro';
     document.getElementById('txAmount').value = Math.abs(amount);
     
     const tx = allTransactions.find(t => t.id === id);
-    if (tx && tx.accountId && allAccounts.some(a => a.id === tx.accountId)) {
+    if (tx && tx.accountId === 'none') {
+      document.getElementById('txAccount').value = 'none';
+    } else if (tx && tx.accountId && allAccounts.some(a => a.id === tx.accountId)) {
       document.getElementById('txAccount').value = tx.accountId;
     } else if (allAccounts.length > 0) {
       document.getElementById('txAccount').value = allAccounts[0].id;
     } else {
-      document.getElementById('txAccount').value = 'principal';
+      document.getElementById('txAccount').value = 'none';
     }
     
     const isIncome = amount > 0;
