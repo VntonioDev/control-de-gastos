@@ -32,7 +32,7 @@ const { currentPath } = Astro.props;
     width: 100%;
     max-width: 480px;
     height: auto;
-    min-height: 80px;
+    min-height: 65px;
     background: rgba(15, 17, 26, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -40,8 +40,8 @@ const { currentPath } = Astro.props;
     display: flex;
     justify-content: space-around;
     align-items: center;
-    padding-top: 12px;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    padding-top: 8px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
     z-index: 10;
   }
 
@@ -49,10 +49,10 @@ const { currentPath } = Astro.props;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     color: var(--text-secondary);
     text-decoration: none;
-    padding: 8px 16px;
+    padding: 6px 12px;
     border-radius: 16px;
     transition: all 0.3s ease;
   }
