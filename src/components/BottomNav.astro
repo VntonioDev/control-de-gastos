@@ -25,10 +25,12 @@ const { currentPath } = Astro.props;
 
 <style is:global>
   .bottom-nav {
-    position: absolute;
+    position: fixed;
     bottom: 0;
-    left: 0;
+    left: 50%;
+    transform: translateX(-50%);
     width: 100%;
+    max-width: 480px;
     height: 80px;
     background: rgba(15, 17, 26, 0.85);
     backdrop-filter: blur(20px);
