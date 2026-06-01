@@ -80,7 +80,7 @@ import BottomNav from '../components/BottomNav.astro';
         </div>
         <div class="form-group">
           <label class="form-label">Límite mensual máximo</label>
-          <input type="number" class="form-input" id="budgetAmount" step="1" min="1" required>
+          <input type="text" inputmode="numeric" class="form-input" id="budgetAmount" placeholder="Ej: 100.000" required>
         </div>
         <button type="submit" class="submit-btn" id="saveBudgetBtn">Guardar Presupuesto</button>
       </form>
@@ -297,7 +297,8 @@ import BottomNav from '../components/BottomNav.astro';
       btn.textContent = 'Guardando...';
 
       const cat = document.getElementById('budgetCategory').value;
-      const amount = parseFloat(document.getElementById('budgetAmount').value);
+      const rawAmount = document.getElementById('budgetAmount').value;
+      const amount = parseFloat(rawAmount.replace(/\./g, '').replace(/,/g, '.'));
 
       try {
         // Si ya hay presupuesto, borrar el viejo (simplificación en vez de upsert)

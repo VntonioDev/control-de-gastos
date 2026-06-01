@@ -146,7 +146,7 @@ import BottomNav from '../components/BottomNav.astro';
 
         <div class="form-group">
           <label class="form-label">Monto</label>
-          <input type="number" class="form-input" id="txAmount" placeholder="0.00" step="0.01" min="0.01" required>
+          <input type="text" inputmode="numeric" class="form-input" id="txAmount" placeholder="Ej: 15.000" required>
         </div>
 
         <button type="submit" class="submit-btn" id="submitBtn">Guardar Transacción</button>
@@ -172,7 +172,7 @@ import BottomNav from '../components/BottomNav.astro';
         </div>
         <div class="form-group">
           <label class="form-label">Monto Objetivo</label>
-          <input type="number" class="form-input" id="goalAmount" step="1" min="1" required>
+          <input type="text" inputmode="numeric" class="form-input" id="goalAmount" placeholder="Ej: 50.000" required>
         </div>
         <button type="submit" class="submit-btn" id="saveGoalBtn">Crear Meta</button>
       </form>
@@ -193,7 +193,7 @@ import BottomNav from '../components/BottomNav.astro';
       <form id="depositForm">
         <div class="form-group">
           <label class="form-label" id="depositSubtitle">Aportando a...</label>
-          <input type="number" class="form-input" id="depositAmount" step="0.01" min="0.01" placeholder="Ej. 50" required>
+          <input type="text" inputmode="numeric" class="form-input" id="depositAmount" placeholder="Ej: 5.000" required>
         </div>
         <button type="submit" class="submit-btn" id="saveDepositBtn">Sumar a la Meta</button>
       </form>
@@ -528,7 +528,8 @@ import BottomNav from '../components/BottomNav.astro';
     
     const title = document.getElementById('txTitle').value;
     const category = document.getElementById('txCategory').value;
-    const amountVal = parseFloat(document.getElementById('txAmount').value);
+    const rawAmount = document.getElementById('txAmount').value;
+    const amountVal = parseFloat(rawAmount.replace(/\./g, '').replace(/,/g, '.'));
     
     if (title && !isNaN(amountVal)) {
       const finalAmount = currentType === 'expense' ? -amountVal : amountVal;
@@ -552,7 +553,8 @@ import BottomNav from '../components/BottomNav.astro';
     saveGoalBtn.disabled = true; saveGoalBtn.textContent = 'Creando...';
     
     const title = document.getElementById('goalTitle').value;
-    const target = parseFloat(document.getElementById('goalAmount').value);
+    const rawTarget = document.getElementById('goalAmount').value;
+    const target = parseFloat(rawTarget.replace(/\./g, '').replace(/,/g, '.'));
     if(title && !isNaN(target)) {
       await addGoal({ userId: currentUser.uid, title, target, current: 0 });
     }
@@ -566,7 +568,8 @@ import BottomNav from '../components/BottomNav.astro';
     if (!currentGoalToDeposit) return;
     saveDepositBtn.disabled = true; saveDepositBtn.textContent = 'Sumando...';
 
-    const amt = parseFloat(document.getElementById('depositAmount').value);
+    const rawAmt = document.getElementById('depositAmount').value;
+    const amt = parseFloat(rawAmt.replace(/\./g, '').replace(/,/g, '.'));
     if(!isNaN(amt)) {
       const newCurrent = currentGoalToDeposit.current + amt;
       await updateDoc(doc(db, "goals", currentGoalToDeposit.id), { current: newCurrent });

@@ -113,7 +113,7 @@ import BottomNav from '../components/BottomNav.astro';
         </div>
         <div class="form-group">
           <label class="form-label">Costo mensual</label>
-          <input type="number" class="form-input" id="subAmount" step="0.01" min="0" required>
+          <input type="text" inputmode="numeric" class="form-input" id="subAmount" placeholder="Ej: 5.000" required>
         </div>
         <button type="submit" class="submit-btn" id="saveSubBtn">Añadir Suscripción</button>
       </form>
@@ -225,7 +225,8 @@ import BottomNav from '../components/BottomNav.astro';
       saveSubBtn.textContent = '...';
       
       const name = document.getElementById('subName').value;
-      const amount = document.getElementById('subAmount').value;
+      const rawAmount = document.getElementById('subAmount').value;
+      const amount = parseFloat(rawAmount.replace(/\./g, '').replace(/,/g, '.'));
 
       try {
         await addSubscription({ name, amount: parseFloat(amount), userId: currentUser.uid });
