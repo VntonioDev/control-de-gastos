@@ -814,25 +814,30 @@ import BottomNav from '../components/BottomNav.astro';
       submitBtn.disabled = true;
       submitBtn.textContent = 'Guardando...';
 
-      const newAccId = await addAccount({
-        userId: currentUser.uid,
-        name,
-        initialBalance
-      });
-      
-      const orphanedTxs = allTransactions.filter(t => !t.accountId || t.accountId === 'principal' || t.accountId === 'none');
-      if (orphanedTxs.length > 0) {
-        if(confirm(`Tienes ${orphanedTxs.length} transacciones sin cuenta asignada. ¿Quieres asociarlas a esta nueva cuenta para que se descuenten/sumen de aquí?`)) {
-          for(let t of orphanedTxs) {
-            await updateTransactionDb(t.id, { accountId: newAccId });
+      try {
+        const newAccId = await addAccount({
+          userId: currentUser.uid,
+          name,
+          initialBalance
+        });
+        
+        const orphanedTxs = allTransactions.filter(t => !t.accountId || t.accountId === 'principal' || t.accountId === 'none');
+        if (orphanedTxs.length > 0) {
+          if(confirm(`Tienes ${orphanedTxs.length} transacciones sin cuenta asignada. ¿Quieres asociarlas a esta nueva cuenta para que se descuenten/sumen de aquí?`)) {
+            for(let t of orphanedTxs) {
+              await updateTransactionDb(t.id, { accountId: newAccId });
+            }
           }
         }
-      }
 
-      document.getElementById('accountModal').classList.remove('active');
-      accountForm.reset();
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Crear Cuenta';
+        document.getElementById('accountModal').classList.remove('active');
+        accountForm.reset();
+      } catch (err) {
+        alert("Error al guardar la cuenta: " + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Crear Cuenta';
+      }
     }
   });
 
