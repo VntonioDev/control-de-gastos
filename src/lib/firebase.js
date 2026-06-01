@@ -102,4 +102,4 @@ export const addGoal = async (goalData) => {
 
 // Exportamos utilidades para escuchar los cambios
 export { onSnapshot, query, where, orderBy, updateDoc };
-export { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, deleteDoc, doc, db };
+export { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, deleteDoc, doc };
