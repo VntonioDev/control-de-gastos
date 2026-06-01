@@ -377,9 +377,13 @@ import BottomNav from '../components/BottomNav.astro';
         div.style.border = '1px solid var(--card-border)';
         div.style.borderRadius = '16px';
         div.style.padding = '12px';
+        div.style.position = 'relative';
         div.style.scrollSnapAlign = 'start';
         div.innerHTML = `
-          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${acc.name}</div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <div style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px;">${acc.name}</div>
+            <button onclick="window.deleteAccount('${acc.id}')" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1rem; padding: 0; line-height: 1;">×</button>
+          </div>
           <div style="font-weight: 600; font-size: 1.1rem; filter: ${accountsVisible ? 'none' : 'blur(5px)'}; transition: filter 0.3s ease;" class="account-balance-text">${formatCurrency(acc.balance)}</div>
         `;
         accountsCarousel.appendChild(div);
@@ -576,6 +580,11 @@ import BottomNav from '../components/BottomNav.astro';
   window.deleteTransaction = async (id) => {
     if(confirm("¿Eliminar transacción?")) await deleteTransactionDb(id);
   };
+  window.deleteAccount = async (id) => {
+    if(confirm("¿Seguro que quieres borrar esta cuenta? Las transacciones pasarán a tu primera cuenta disponible.")) {
+      await deleteDoc(doc(db, "accounts", id));
+    }
+  };
   window.editTransaction = (id, title, category, amount) => {
     editingTxId = id;
     document.querySelector('.modal-title').textContent = 'Editar Transacción';
@@ -713,7 +722,7 @@ import BottomNav from '../components/BottomNav.astro';
   // Toggle Eye Accounts
   toggleAccountsBtn.addEventListener('click', () => {
     accountsVisible = !accountsVisible;
-    toggleAccountsBtn.textContent = accountsVisible ? '👁️' : '🙈';
+    toggleAccountsBtn.textContent = accountsVisible ? '👁️' : '🔒';
     updateUI();
   });
 
