@@ -29,15 +29,15 @@ import BottomNav from '../components/BottomNav.astro';
 
   <main class="main-content">
     <div class="balance-card">
-      <div class="balance-label">Gastos del Período</div>
-      <div class="balance-amount" id="balanceAmount">$0</div>
+      <div class="balance-label">Saldo Total</div>
+      <div class="balance-amount" id="globalBalanceAmount">$0</div>
       
       <div class="balance-stats">
         <div class="stat">
           <div class="stat-label">
-            <span>💰</span> Saldo Total
+            <span>📉</span> Gastos
           </div>
-          <div class="stat-amount" id="globalBalanceAmount">$0</div>
+          <div class="stat-amount" id="balanceAmount">$0</div>
         </div>
         <div class="stat">
           <div class="stat-label">
@@ -238,6 +238,26 @@ import BottomNav from '../components/BottomNav.astro';
       </form>
     </div>
   </div>
+  <!-- Delete Account Modal -->
+  <div class="modal-overlay" id="deleteAccountModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Eliminar Cuenta</div>
+        <button class="close-btn" id="closeDeleteAccBtn">×</button>
+      </div>
+      <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.9rem;">
+        ¿Qué deseas hacer con las transacciones asociadas a esta cuenta?
+      </p>
+      <div class="form-group">
+        <label class="form-label">Acción</label>
+        <select id="deleteAccountAction" class="form-input" style="color: black;">
+          <option value="none">Dejarlas sin cuenta (solo historial)</option>
+        </select>
+      </div>
+      <button class="submit-btn" id="confirmDeleteAccBtn" style="background: var(--negative);">Eliminar Cuenta</button>
+    </div>
+  </div>
+
 </Layout>
 
 <script>
@@ -349,11 +369,11 @@ import BottomNav from '../components/BottomNav.astro';
         accountsBalance[acc.id] = { name: acc.name, balance: acc.initialBalance || 0 };
       });
       
-      const defaultAccId = allAccounts[0].id;
-
       displayedTransactions.forEach(t => {
-        if (t.accountId === 'none') return; // Explícitamente no afectar ninguna cuenta
-        let accId = (t.accountId && accountsBalance[t.accountId]) ? t.accountId : defaultAccId;
+        let accId = t.accountId;
+        if (!accId || accId === 'principal' || accId === 'none' || !accountsBalance[accId]) {
+          return; // No afecta ninguna cuenta
+        }
         accountsBalance[accId].balance += t.amount;
       });
 
@@ -596,15 +616,45 @@ import BottomNav from '../components/BottomNav.astro';
   window.deleteTransaction = async (id) => {
     if(confirm("¿Eliminar transacción?")) await deleteTransactionDb(id);
   };
-  window.deleteAccount = async (id) => {
-    if(confirm("¿Seguro que quieres borrar esta cuenta? Las transacciones pasarán a tu primera cuenta disponible.")) {
-      try {
-        await deleteAccountDb(id);
-      } catch (err) {
-        alert("Error al borrar cuenta: " + err.message);
+  let accountToDelete = null;
+  const deleteAccountModal = document.getElementById('deleteAccountModal');
+  const deleteAccountAction = document.getElementById('deleteAccountAction');
+
+  window.deleteAccount = (id) => {
+    accountToDelete = id;
+    deleteAccountAction.innerHTML = '<option value="none" style="color: black;">Dejarlas sin cuenta (solo historial)</option>';
+    allAccounts.forEach(acc => {
+      if (acc.id !== id) {
+        deleteAccountAction.innerHTML += `<option value="${acc.id}" style="color: black;">Mover a: ${acc.name}</option>`;
       }
-    }
+    });
+    deleteAccountModal.classList.add('active');
   };
+
+  document.getElementById('closeDeleteAccBtn').addEventListener('click', () => {
+    deleteAccountModal.classList.remove('active');
+    accountToDelete = null;
+  });
+
+  document.getElementById('confirmDeleteAccBtn').addEventListener('click', async () => {
+    if (!accountToDelete) return;
+    document.getElementById('confirmDeleteAccBtn').disabled = true;
+    document.getElementById('confirmDeleteAccBtn').textContent = 'Procesando...';
+    
+    const targetAccId = deleteAccountAction.value;
+    const txsToUpdate = allTransactions.filter(t => t.accountId === accountToDelete);
+    
+    for(let t of txsToUpdate) {
+      await updateTransactionDb(t.id, { accountId: targetAccId });
+    }
+    
+    await deleteAccountDb(accountToDelete);
+    
+    deleteAccountModal.classList.remove('active');
+    accountToDelete = null;
+    document.getElementById('confirmDeleteAccBtn').disabled = false;
+    document.getElementById('confirmDeleteAccBtn').textContent = 'Eliminar Cuenta';
+  });
   window.editTransaction = (id, title, category, amount) => {
     editingTxId = id;
     document.querySelector('.modal-title').textContent = 'Editar Transacción';
@@ -752,19 +802,40 @@ import BottomNav from '../components/BottomNav.astro';
   openAccountModalBtn.addEventListener('click', () => accountModal.classList.add('active'));
   closeAccountModalBtn.addEventListener('click', () => { accountModal.classList.remove('active'); accountForm.reset(); });
   
-  accountForm.addEventListener('submit', async (e) => {
+  const addAccountForm = document.getElementById('addAccountForm');
+  addAccountForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) return;
-    saveAccountBtn.disabled = true; saveAccountBtn.textContent = 'Creando...';
-    
+
     const name = document.getElementById('accName').value;
-    const rawBalance = document.getElementById('accBalance').value;
-    const initialBalance = parseFloat(rawBalance.replace(/\./g, '').replace(/,/g, '.'));
-    
-    if(name && !isNaN(initialBalance)) {
-      await addAccount({ userId: currentUser.uid, name, initialBalance });
+    const initialBalanceStr = document.getElementById('accBalance').value.replace(/\./g, '');
+    const initialBalance = parseFloat(initialBalanceStr);
+
+    if (name && !isNaN(initialBalance)) {
+      const submitBtn = addAccountForm.querySelector('.submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Guardando...';
+
+      const newAccId = await addAccount({
+        userId: currentUser.uid,
+        name,
+        initialBalance
+      });
+      
+      const orphanedTxs = allTransactions.filter(t => !t.accountId || t.accountId === 'principal' || t.accountId === 'none');
+      if (orphanedTxs.length > 0) {
+        if(confirm(`Tienes ${orphanedTxs.length} transacciones sin cuenta asignada. ¿Quieres asociarlas a esta nueva cuenta para que se descuenten/sumen de aquí?`)) {
+          for(let t of orphanedTxs) {
+            await updateTransactionDb(t.id, { accountId: newAccId });
+          }
+        }
+      }
+
+      document.getElementById('accountModal').classList.remove('active');
+      addAccountForm.reset();
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Crear Cuenta';
     }
-    accountModal.classList.remove('active'); accountForm.reset(); saveAccountBtn.disabled = false; saveAccountBtn.textContent = 'Crear Cuenta';
   });
 
 </script>
