@@ -45,6 +45,46 @@ export const deleteTransactionDb = async (id) => {
   }
 };
 
+// Colecciones adicionales
+export const budgetsCol = collection(db, "budgets");
+export const subscriptionsCol = collection(db, "subscriptions");
+
+// Función helper para añadir o actualizar presupuesto
+export const setBudget = async (budgetData) => {
+  try {
+    const docRef = await addDoc(budgetsCol, {
+      ...budgetData,
+      createdAt: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error setting budget: ", error);
+    throw error;
+  }
+};
+
+export const addSubscription = async (subData) => {
+  try {
+    const docRef = await addDoc(subscriptionsCol, {
+      ...subData,
+      createdAt: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error adding sub: ", error);
+    throw error;
+  }
+};
+
+export const deleteSubscriptionDb = async (id) => {
+  try {
+    await deleteDoc(doc(db, "subscriptions", id));
+  } catch (error) {
+    console.error("Error deleting sub: ", error);
+    throw error;
+  }
+};
+
 // Exportamos utilidades para escuchar los cambios
 export { onSnapshot, query, where, orderBy };
-export { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged };
+export { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, db, deleteDoc, doc };

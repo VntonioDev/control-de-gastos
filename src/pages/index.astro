@@ -5,22 +5,31 @@ import BottomNav from '../components/BottomNav.astro';
 
 <Layout title="Wallet | Control de Gastos">
   <header>
-    <div class="user-info">
-      <div class="avatar">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white" style="width: 24px; height: 24px; margin: 8px;">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-        </svg>
+    <div class="user-info" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+      <div style="display: flex; align-items: center;">
+        <div class="avatar">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white" style="width: 24px; height: 24px; margin: 8px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+          </svg>
+        </div>
+        <div>
+          <div class="greeting">Buenos días,</div>
+          <div class="name" id="userNameDisplay">Cargando...</div>
+        </div>
       </div>
       <div>
-        <div class="greeting">Buenos días,</div>
-        <div class="name" id="userNameDisplay">Cargando...</div>
+        <select id="monthFilter" style="background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--card-border); padding: 4px 8px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 0.85rem; outline: none; cursor: pointer;">
+          <option value="current">Este mes</option>
+          <option value="last">Mes pasado</option>
+          <option value="all">Todos</option>
+        </select>
       </div>
     </div>
   </header>
 
   <main class="main-content">
     <div class="balance-card">
-      <div class="balance-label">Balance Total</div>
+      <div class="balance-label">Balance del Periodo</div>
       <div class="balance-amount" id="total-balance">$0.00</div>
       <div class="balance-stats">
         <div class="stat">
@@ -140,7 +149,8 @@ import BottomNav from '../components/BottomNav.astro';
   import { auth, transactionsCol, addTransaction, deleteTransactionDb, onSnapshot, query, where } from '../lib/firebase.js';
 
   let currentType = 'expense';
-  let transactions = [];
+  let allTransactions = [];
+  let displayedTransactions = [];
   let currentUser = null;
   let unsubscribeSnapshot = null;
 
@@ -158,6 +168,7 @@ import BottomNav from '../components/BottomNav.astro';
   const btnIncomeType = document.querySelector('.type-btn.income');
   const submitBtn = document.getElementById('submitBtn');
   const userNameDisplay = document.getElementById('userNameDisplay');
+  const monthFilter = document.getElementById('monthFilter');
 
   const formatCurrency = (amount) => '$' + Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -166,9 +177,37 @@ import BottomNav from '../components/BottomNav.astro';
     return now.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' });
   };
 
+  const filterTransactions = () => {
+    const filter = monthFilter.value;
+    if (filter === 'all') {
+      displayedTransactions = [...allTransactions];
+    } else {
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
+      displayedTransactions = allTransactions.filter(tx => {
+        if (!tx.createdAt) return true; // Si no tiene fecha por alguna razón, lo mostramos
+        const txDate = new Date(tx.createdAt);
+        if (filter === 'current') {
+          return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
+        } else if (filter === 'last') {
+          let lastMonth = currentMonth - 1;
+          let lastYear = currentYear;
+          if (lastMonth < 0) { lastMonth = 11; lastYear--; }
+          return txDate.getMonth() === lastMonth && txDate.getFullYear() === lastYear;
+        }
+        return true;
+      });
+    }
+    updateUI();
+  };
+
+  monthFilter.addEventListener('change', filterTransactions);
+
   const updateUI = () => {
-    const income = transactions.filter(t => t.amount > 0).reduce((acc, t) => acc + t.amount, 0);
-    const expense = transactions.filter(t => t.amount < 0).reduce((acc, t) => acc + t.amount, 0);
+    const income = displayedTransactions.filter(t => t.amount > 0).reduce((acc, t) => acc + t.amount, 0);
+    const expense = displayedTransactions.filter(t => t.amount < 0).reduce((acc, t) => acc + t.amount, 0);
     const balance = income + expense;
 
     balanceEl.textContent = formatCurrency(balance);
@@ -177,12 +216,12 @@ import BottomNav from '../components/BottomNav.astro';
 
     listEl.innerHTML = '';
     
-    if (transactions.length === 0) {
-      listEl.innerHTML = '<div class="empty-state">No hay transacciones aún. <br>¡Añade una para empezar!</div>';
+    if (displayedTransactions.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">No hay transacciones en este periodo.</div>';
       return;
     }
 
-    transactions.forEach(tx => {
+    displayedTransactions.forEach(tx => {
       const isPositive = tx.amount > 0;
       let colorCode = isPositive ? '#34d399' : '#f87171';
       let bgStyle = isPositive ? 'background-color: rgba(52, 211, 153, 0.2)' : 'background-color: rgba(248, 113, 113, 0.2)';
@@ -215,23 +254,20 @@ import BottomNav from '../components/BottomNav.astro';
 
   const loadUserData = (user) => {
     currentUser = user;
-    userNameDisplay.textContent = user.email.split('@')[0];
+    userNameDisplay.textContent = user.displayName || user.email.split('@')[0];
 
     if (unsubscribeSnapshot) unsubscribeSnapshot();
 
-    // Consultar solo las transacciones de ESTE usuario
     const q = query(transactionsCol, where("userId", "==", user.uid));
     unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-      transactions = [];
+      allTransactions = [];
       snapshot.forEach((doc) => {
-        transactions.push({ id: doc.id, ...doc.data() });
+        allTransactions.push({ id: doc.id, ...doc.data() });
       });
-      // Ordenar localmente por fecha (de más reciente a más antigua)
-      transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      updateUI();
+      allTransactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      filterTransactions();
     }, (error) => {
       console.error("Error al escuchar Firebase:", error);
-      alert("Error de permisos o conexión. Revisa las Reglas de Firestore.");
     });
   };
 

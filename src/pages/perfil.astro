@@ -37,6 +37,21 @@ import BottomNav from '../components/BottomNav.astro';
         Cerrar Sesión
       </button>
     </div>
+
+    <!-- Sección de Suscripciones -->
+    <div class="section-header" style="margin-top: 32px; display: flex; justify-content: space-between; align-items: center;">
+      <h2 class="section-title">Suscripciones Fijas</h2>
+      <button id="openSubModalBtn" style="background: var(--accent); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 1.2rem; cursor: pointer;">+</button>
+    </div>
+    <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 16px;">
+      <div id="subsList">
+        <div class="empty-state" style="font-size: 0.9rem;">Cargando suscripciones...</div>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--card-border); font-weight: 600;">
+        <span>Total mensual:</span>
+        <span id="subsTotal" style="color: var(--negative);">$0.00</span>
+      </div>
+    </div>
   </main>
 
   <BottomNav currentPath="/perfil" />
@@ -61,6 +76,15 @@ import BottomNav from '../components/BottomNav.astro';
         </div>
       </div>
 
+      <div style="margin-top: 24px;">
+        <button id="exportCsvBtn" style="background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-primary); padding: 12px 24px; border-radius: 12px; cursor: pointer; width: 100%; font-weight: 600; display: flex; justify-content: center; align-items: center; gap: 8px;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          Exportar Transacciones a CSV
+        </button>
+      </div>
+
       <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--card-border);">
         <h4 style="color: var(--negative); margin-bottom: 8px;">Zona de Peligro</h4>
         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">Eliminar todas tus transacciones de forma permanente. Esta acción no se puede deshacer.</p>
@@ -71,24 +95,103 @@ import BottomNav from '../components/BottomNav.astro';
     </div>
   </div>
 
+  <!-- Modal Suscripción -->
+  <div class="modal-overlay" id="subModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Nueva Suscripción</h3>
+        <button class="close-btn" id="closeSubModalBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 24px; height: 24px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <form id="subForm">
+        <div class="form-group">
+          <label class="form-label">Servicio (Ej. Netflix)</label>
+          <input type="text" class="form-input" id="subName" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Costo mensual</label>
+          <input type="number" class="form-input" id="subAmount" step="0.01" min="0" required>
+        </div>
+        <button type="submit" class="submit-btn" id="saveSubBtn">Añadir Suscripción</button>
+      </form>
+    </div>
+  </div>
+
   <script>
-    import { auth, signOut, db } from '../lib/firebase.js';
+    import { auth, signOut, db, subscriptionsCol, addSubscription, deleteSubscriptionDb, onSnapshot, query, where } from '../lib/firebase.js';
     import { updateProfile } from "firebase/auth";
-    import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
+    import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 
     const profileName = document.getElementById('profileName');
     const profileEmail = document.getElementById('profileEmail');
     const logoutBtn = document.getElementById('logoutBtn');
     
-    // Modal elements
+    // Ajustes
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsModal = document.getElementById('settingsModal');
     const closeSettingsBtn = document.getElementById('closeSettingsBtn');
     const profileNameInput = document.getElementById('profileNameInput');
     const updateNameBtn = document.getElementById('updateNameBtn');
     const deleteAllBtn = document.getElementById('deleteAllBtn');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+
+    // Suscripciones
+    const openSubModalBtn = document.getElementById('openSubModalBtn');
+    const subModal = document.getElementById('subModal');
+    const closeSubModalBtn = document.getElementById('closeSubModalBtn');
+    const subForm = document.getElementById('subForm');
+    const subsList = document.getElementById('subsList');
+    const subsTotal = document.getElementById('subsTotal');
+    const saveSubBtn = document.getElementById('saveSubBtn');
 
     let currentUser = null;
+    let unsubscribeSubs = null;
+
+    const formatCurrency = (amount) => '$' + Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const loadSubscriptions = (user) => {
+      if (unsubscribeSubs) unsubscribeSubs();
+      const q = query(subscriptionsCol, where("userId", "==", user.uid));
+      
+      unsubscribeSubs = onSnapshot(q, (snapshot) => {
+        subsList.innerHTML = '';
+        let total = 0;
+        let count = 0;
+
+        snapshot.forEach((docSnap) => {
+          count++;
+          const data = docSnap.data();
+          total += parseFloat(data.amount);
+
+          const div = document.createElement('div');
+          div.style.display = 'flex';
+          div.style.justifyContent = 'space-between';
+          div.style.alignItems = 'center';
+          div.style.padding = '12px 0';
+          div.style.borderBottom = '1px solid var(--card-border)';
+          
+          div.innerHTML = `
+            <div>
+              <div style="font-weight: 500;">${data.name}</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="color: var(--negative);">${formatCurrency(data.amount)}/m</span>
+              <button onclick="window.deleteSub('${docSnap.id}')" style="background:none; border:none; color: var(--text-secondary); cursor: pointer; font-size: 1.2rem;">×</button>
+            </div>
+          `;
+          subsList.appendChild(div);
+        });
+
+        if (count === 0) {
+          subsList.innerHTML = '<div class="empty-state" style="font-size: 0.9rem;">No tienes suscripciones añadidas.</div>';
+        }
+
+        subsTotal.textContent = formatCurrency(total);
+      });
+    };
 
     auth.onAuthStateChanged((user) => {
       if (user) {
@@ -97,6 +200,7 @@ import BottomNav from '../components/BottomNav.astro';
         profileName.textContent = displayName;
         profileEmail.textContent = user.email;
         profileNameInput.value = user.displayName || '';
+        loadSubscriptions(user);
       }
     });
 
@@ -109,64 +213,101 @@ import BottomNav from '../components/BottomNav.astro';
       }
     });
 
-    // Ajustes
-    settingsBtn.addEventListener('click', () => {
-      settingsModal.classList.add('active');
+    window.deleteSub = async (id) => {
+      await deleteSubscriptionDb(id);
+    };
+
+    // Modal Suscripciones
+    openSubModalBtn.addEventListener('click', () => subModal.classList.add('active'));
+    closeSubModalBtn.addEventListener('click', () => { subModal.classList.remove('active'); subForm.reset(); });
+
+    subForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUser) return;
+
+      saveSubBtn.disabled = true;
+      saveSubBtn.textContent = '...';
+      
+      const name = document.getElementById('subName').value;
+      const amount = document.getElementById('subAmount').value;
+
+      try {
+        await addSubscription({ name, amount: parseFloat(amount), userId: currentUser.uid });
+        subModal.classList.remove('active');
+        subForm.reset();
+      } catch (error) {
+        console.error(error);
+        alert("Error al guardar.");
+      }
+      saveSubBtn.disabled = false;
+      saveSubBtn.textContent = 'Añadir Suscripción';
     });
 
-    closeSettingsBtn.addEventListener('click', () => {
-      settingsModal.classList.remove('active');
-    });
+    // Ajustes
+    settingsBtn.addEventListener('click', () => settingsModal.classList.add('active'));
+    closeSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('active'));
 
     updateNameBtn.addEventListener('click', async () => {
       if (!currentUser) return;
       const newName = profileNameInput.value.trim();
       if (!newName) return;
-
       updateNameBtn.textContent = '...';
-      updateNameBtn.disabled = true;
-
       try {
         await updateProfile(currentUser, { displayName: newName });
         profileName.textContent = newName;
-        alert("Nombre actualizado correctamente.");
-      } catch (error) {
-        console.error(error);
-        alert("Error al actualizar el nombre.");
-      }
-
+      } catch (e) {}
       updateNameBtn.textContent = 'Guardar';
-      updateNameBtn.disabled = false;
     });
 
-    deleteAllBtn.addEventListener('click', async () => {
+    // CSV Export
+    exportCsvBtn.addEventListener('click', async () => {
       if (!currentUser) return;
+      exportCsvBtn.textContent = 'Generando...';
       
-      const confirmDelete = confirm("¿Estás 100% seguro de que quieres borrar TODOS tus datos? Se perderá todo tu historial.");
-      if (!confirmDelete) return;
-
-      deleteAllBtn.textContent = 'Borrando...';
-      deleteAllBtn.disabled = true;
-
       try {
         const q = query(collection(db, "transactions"), where("userId", "==", currentUser.uid));
         const snapshot = await getDocs(q);
         
-        const deletePromises = [];
-        snapshot.forEach((document) => {
-          deletePromises.push(deleteDoc(doc(db, "transactions", document.id)));
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Fecha,Titulo,Categoria,Monto\n";
+
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          const amountStr = d.amount.toString();
+          csvContent += `"${d.date}","${d.title}","${d.category}","${amountStr}"\n`;
         });
 
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "mis_gastos.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch(e) {
+        console.error(e);
+        alert("Error al exportar.");
+      }
+      exportCsvBtn.innerHTML = 'Exportar Transacciones a CSV';
+    });
+
+    deleteAllBtn.addEventListener('click', async () => {
+      if (!currentUser) return;
+      const confirmDelete = confirm("¿Estás 100% seguro de que quieres borrar TODOS tus datos?");
+      if (!confirmDelete) return;
+      deleteAllBtn.textContent = 'Borrando...';
+      try {
+        const q = query(collection(db, "transactions"), where("userId", "==", currentUser.uid));
+        const snapshot = await getDocs(q);
+        const deletePromises = [];
+        snapshot.forEach((document) => deletePromises.push(deleteDoc(doc(db, "transactions", document.id))));
         await Promise.all(deletePromises);
         alert("Todos tus datos han sido eliminados.");
         settingsModal.classList.remove('active');
-      } catch (error) {
-        console.error(error);
-        alert("Error al borrar los datos.");
+      } catch (e) {
+        console.error(e);
       }
-
       deleteAllBtn.textContent = 'Borrar todos mis datos';
-      deleteAllBtn.disabled = false;
     });
 
   </script>
