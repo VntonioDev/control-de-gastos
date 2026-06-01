@@ -55,7 +55,8 @@ const { title } = Astro.props;
 				color: var(--text-primary);
 				min-height: 100vh;
 				display: flex;
-				justify-content: center;
+				flex-direction: column;
+				align-items: center;
 				background-image: 
 					radial-gradient(circle at 15% 10%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
 					radial-gradient(circle at 85% 90%, rgba(217, 70, 239, 0.15) 0%, transparent 40%);
@@ -519,7 +520,7 @@ const { title } = Astro.props;
 		<div class="app-container" id="app-container" style="display: none;">
 			<slot />
 		</div>
-		<div id="nav-container" style="display: none; width: 100%; max-width: 480px; margin: 0 auto;">
+		<div id="nav-container" style="display: none;">
 			<slot name="bottom-nav" />
 		</div>
 		
