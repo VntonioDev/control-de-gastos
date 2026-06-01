@@ -107,7 +107,7 @@ import BottomNav from '../components/BottomNav.astro';
     </div>
   </main>
 
-  <BottomNav currentPath="/" />
+  <BottomNav slot="bottom-nav" currentPath="/" />
 
   <!-- Modal para Nueva Transacción -->
   <div class="modal-overlay" id="transactionModal">
@@ -248,7 +248,7 @@ import BottomNav from '../components/BottomNav.astro';
   const saveDepositBtn = document.getElementById('saveDepositBtn');
   const depositSubtitle = document.getElementById('depositSubtitle');
 
-  const formatCurrency = (amount) => '$' + Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const formatCurrency = (amount) => Math.round(Math.abs(amount)).toLocaleString('es-CL') + ' CLP';
 
   const getFormattedDate = () => {
     const now = new Date();
