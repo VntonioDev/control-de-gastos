@@ -29,26 +29,21 @@ import BottomNav from '../components/BottomNav.astro';
 
   <main class="main-content">
     <div class="balance-card">
-      <div class="balance-label">Balance del Periodo</div>
-      <div class="balance-amount" id="total-balance">$0.00</div>
+      <div class="balance-label">Gastos del Período</div>
+      <div class="balance-amount" id="balanceAmount">$0</div>
+      
       <div class="balance-stats">
         <div class="stat">
           <div class="stat-label">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 14px; height: 14px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 19.5v-15m0 0l-6.75 6.75M12 4.5l6.75 6.75" />
-            </svg>
-            Ingresos
+            <span>💰</span> Saldo Total
           </div>
-          <div class="stat-amount" id="total-income">$0.00</div>
+          <div class="stat-amount" id="globalBalanceAmount">$0</div>
         </div>
         <div class="stat">
           <div class="stat-label">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 14px; height: 14px;">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6.75-6.75M12 19.5l-6.75-6.75" />
-            </svg>
-            Gastos
+            <span>📈</span> Ingresos
           </div>
-          <div class="stat-amount" id="total-expense">$0.00</div>
+          <div class="stat-amount" id="incomeAmount">$0</div>
         </div>
       </div>
     </div>
@@ -264,9 +259,6 @@ import BottomNav from '../components/BottomNav.astro';
   let accountsVisible = true;
 
   const listEl = document.getElementById('transaction-list');
-  const balanceEl = document.getElementById('total-balance');
-  const incomeEl = document.getElementById('total-income');
-  const expenseEl = document.getElementById('total-expense');
   const userNameDisplay = document.getElementById('userNameDisplay');
   const monthFilter = document.getElementById('monthFilter');
   
@@ -394,14 +386,34 @@ import BottomNav from '../components/BottomNav.astro';
       const div = document.createElement('div');
       div.style.color = 'var(--text-secondary)';
       div.style.fontSize = '0.85rem';
-      div.textContent = 'No tienes cuentas creadas. Crea una para organizar tus fondos.';
+      div.textContent = 'No tienes cuentas creadas.';
       accountsCarousel.appendChild(div);
     }
 
-    balanceEl.textContent = formatCurrency(globalBalance);
-    balanceEl.style.filter = accountsVisible ? 'none' : 'blur(8px)';
-    incomeEl.textContent = formatCurrency(income);
-    expenseEl.textContent = formatCurrency(expense);
+    // Append 'Add Account' card
+    const addAccDiv = document.createElement('div');
+    addAccDiv.style.minWidth = '140px';
+    addAccDiv.style.background = 'rgba(255, 255, 255, 0.05)';
+    addAccDiv.style.border = '1px dashed var(--text-secondary)';
+    addAccDiv.style.borderRadius = '16px';
+    addAccDiv.style.padding = '12px';
+    addAccDiv.style.display = 'flex';
+    addAccDiv.style.flexDirection = 'column';
+    addAccDiv.style.alignItems = 'center';
+    addAccDiv.style.justifyContent = 'center';
+    addAccDiv.style.cursor = 'pointer';
+    addAccDiv.style.scrollSnapAlign = 'start';
+    addAccDiv.onclick = () => { document.getElementById('accountModal').classList.add('active'); };
+    addAccDiv.innerHTML = `
+      <div style="font-size: 1.5rem; color: var(--text-secondary); margin-bottom: 4px;">+</div>
+      <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Agregar Cuenta</div>
+    `;
+    accountsCarousel.appendChild(addAccDiv);
+
+    document.getElementById('balanceAmount').textContent = formatCurrency(Math.abs(expense));
+    document.getElementById('globalBalanceAmount').textContent = formatCurrency(globalBalance);
+    document.getElementById('globalBalanceAmount').style.filter = accountsVisible ? 'none' : 'blur(5px)';
+    document.getElementById('incomeAmount').textContent = formatCurrency(income);
 
     // Actualizar select de cuentas en modal de transacciones
     const currentTxAcc = txAccountSelect.value;
