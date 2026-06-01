@@ -801,9 +801,7 @@ import BottomNav from '../components/BottomNav.astro';
   // Accounts Handlers
   openAccountModalBtn.addEventListener('click', () => accountModal.classList.add('active'));
   closeAccountModalBtn.addEventListener('click', () => { accountModal.classList.remove('active'); accountForm.reset(); });
-  
-  const addAccountForm = document.getElementById('addAccountForm');
-  addAccountForm.addEventListener('submit', async (e) => {
+  accountForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) return;
 
@@ -812,7 +810,7 @@ import BottomNav from '../components/BottomNav.astro';
     const initialBalance = parseFloat(initialBalanceStr);
 
     if (name && !isNaN(initialBalance)) {
-      const submitBtn = addAccountForm.querySelector('.submit-btn');
+      const submitBtn = accountForm.querySelector('.submit-btn');
       submitBtn.disabled = true;
       submitBtn.textContent = 'Guardando...';
 
@@ -832,7 +830,7 @@ import BottomNav from '../components/BottomNav.astro';
       }
 
       document.getElementById('accountModal').classList.remove('active');
-      addAccountForm.reset();
+      accountForm.reset();
       submitBtn.disabled = false;
       submitBtn.textContent = 'Crear Cuenta';
     }
