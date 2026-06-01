@@ -90,7 +90,7 @@ import BottomNav from '../components/BottomNav.astro';
   <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <script>
-    import { auth, transactionsCol, budgetsCol, subscriptionsCol, setBudget, onSnapshot, query, where, deleteDoc, doc, db } from '../lib/firebase.js';
+    import { auth, onAuthStateChanged, transactionsCol, budgetsCol, subscriptionsCol, setBudget, onSnapshot, query, where, deleteDoc, doc, db } from '../lib/firebase.js';
 
     const chartLoading = document.getElementById('chartLoading');
     const categoryList = document.getElementById('category-list');
@@ -241,7 +241,7 @@ import BottomNav from '../components/BottomNav.astro';
       });
     };
 
-    auth.onAuthStateChanged((user) => {
+    onAuthStateChanged(auth, (user) => {
       if (user) {
         currentUser = user;
         

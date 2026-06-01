@@ -121,7 +121,7 @@ import BottomNav from '../components/BottomNav.astro';
   </div>
 
   <script>
-    import { auth, signOut, db, subscriptionsCol, addSubscription, deleteSubscriptionDb, onSnapshot, query, where } from '../lib/firebase.js';
+    import { auth, onAuthStateChanged, signOut, db, subscriptionsCol, addSubscription, deleteSubscriptionDb, onSnapshot, query, where } from '../lib/firebase.js';
     import { updateProfile } from "firebase/auth";
     import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 
@@ -193,7 +193,7 @@ import BottomNav from '../components/BottomNav.astro';
       });
     };
 
-    auth.onAuthStateChanged((user) => {
+    onAuthStateChanged(auth, (user) => {
       if (user) {
         currentUser = user;
         const displayName = user.displayName || user.email.split('@')[0];
