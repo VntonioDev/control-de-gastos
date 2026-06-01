@@ -52,7 +52,6 @@ import BottomNav from '../components/BottomNav.astro';
     <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
       <h3 style="font-size: 1rem; font-weight: 600;">Cuentas</h3>
       <div style="display: flex; gap: 12px; align-items: center;">
-        <button id="toggleAccountsBtn" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.2rem;">👁️</button>
         <button id="openAccountModalBtn" style="background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--card-border); padding: 4px 12px; border-radius: 8px; font-size: 0.8rem; cursor: pointer;">+ Nueva</button>
       </div>
     </div>
@@ -314,7 +313,6 @@ import BottomNav from '../components/BottomNav.astro';
   const accountForm = document.getElementById('accountForm');
   const saveAccountBtn = document.getElementById('saveAccountBtn');
   const accountsCarousel = document.getElementById('accountsCarousel');
-  const toggleAccountsBtn = document.getElementById('toggleAccountsBtn');
   const txAccountSelect = document.getElementById('txAccount');
 
   const formatCurrency = (amount) => Math.round(Math.abs(amount)).toLocaleString('es-CL') + ' CLP';
@@ -401,7 +399,7 @@ import BottomNav from '../components/BottomNav.astro';
             <div style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px;">${acc.name}</div>
             <button onclick="window.deleteAccount('${accId}')" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1rem; padding: 0; line-height: 1;">×</button>
           </div>
-          <div style="font-weight: 600; font-size: 1.1rem; filter: ${accountsVisible ? 'none' : 'blur(12px)'}; opacity: ${accountsVisible ? '1' : '0.4'}; transition: all 0.3s ease;" class="account-balance-text">${formatCurrency(acc.balance)}</div>
+          <div style="font-weight: 600; font-size: 1.1rem;" class="account-balance-text">${formatCurrency(acc.balance)}</div>
         `;
         accountsCarousel.appendChild(div);
       });
@@ -436,9 +434,6 @@ import BottomNav from '../components/BottomNav.astro';
 
     document.getElementById('balanceAmount').textContent = formatCurrency(Math.abs(expense));
     document.getElementById('globalBalanceAmount').textContent = formatCurrency(globalBalance);
-    document.getElementById('globalBalanceAmount').style.filter = accountsVisible ? 'none' : 'blur(12px)';
-    document.getElementById('globalBalanceAmount').style.opacity = accountsVisible ? '1' : '0.4';
-    document.getElementById('globalBalanceAmount').style.transition = 'all 0.3s ease';
     document.getElementById('incomeAmount').textContent = formatCurrency(income);
 
     // Actualizar select de cuentas en modal de transacciones
@@ -794,13 +789,6 @@ import BottomNav from '../components/BottomNav.astro';
       await updateDoc(doc(db, "goals", currentGoalToDeposit.id), { current: newCurrent });
     }
     depositModal.classList.remove('active'); depositForm.reset(); saveDepositBtn.disabled = false; saveDepositBtn.textContent = 'Sumar a la Meta';
-  });
-
-  // Toggle Eye Accounts
-  toggleAccountsBtn.addEventListener('click', () => {
-    accountsVisible = !accountsVisible;
-    toggleAccountsBtn.textContent = accountsVisible ? '👁️' : '🔒';
-    updateUI();
   });
 
   // Accounts Handlers
