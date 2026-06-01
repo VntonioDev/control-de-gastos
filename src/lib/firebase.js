@@ -26,8 +26,12 @@ enableIndexedDbPersistence(db).catch((err) => {
 
 export const auth = getAuth(app);
 
-// Colección principal
+// Colecciones
 export const transactionsCol = collection(db, "transactions");
+export const budgetsCol = collection(db, "budgets");
+export const subscriptionsCol = collection(db, "subscriptions");
+export const goalsCol = collection(db, "goals");
+export const accountsCol = collection(db, "accounts");
 
 // Utilidades para operaciones CRUD
 
@@ -65,10 +69,6 @@ export const updateTransactionDb = async (id, newData) => {
   }
 };
 
-// Colecciones adicionales
-export const budgetsCol = collection(db, "budgets");
-export const subscriptionsCol = collection(db, "subscriptions");
-
 // Función helper para añadir o actualizar presupuesto
 export const setBudget = async (budgetData) => {
   try {
@@ -105,8 +105,6 @@ export const deleteSubscriptionDb = async (id) => {
   }
 };
 
-export const goalsCol = collection(db, "goals");
-
 export const addGoal = async (goalData) => {
   try {
     const docRef = await addDoc(goalsCol, {
@@ -121,5 +119,26 @@ export const addGoal = async (goalData) => {
 };
 
 // Exportamos utilidades para escuchar los cambios
+export const deleteGoalDb = async (id) => {
+  return await deleteDoc(doc(db, "goals", id));
+};
+
+export const addAccount = async (accountData) => {
+  try {
+    const docRef = await addDoc(accountsCol, {
+      ...accountData,
+      createdAt: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error adding account: ", error);
+    throw error;
+  }
+};
+
+export const deleteAccountDb = async (id) => {
+  return await deleteDoc(doc(db, "accounts", id));
+};
+
 export { onSnapshot, query, where, orderBy, updateDoc };
 export { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, deleteDoc, doc };

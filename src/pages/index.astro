@@ -53,6 +53,18 @@ import BottomNav from '../components/BottomNav.astro';
       </div>
     </div>
 
+    <!-- SECCIÓN CUENTAS -->
+    <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="font-size: 1rem; font-weight: 600;">Cuentas</h3>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <button id="toggleAccountsBtn" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.2rem;">👁️</button>
+        <button id="openAccountModalBtn" style="background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--card-border); padding: 4px 12px; border-radius: 8px; font-size: 0.8rem; cursor: pointer;">+ Nueva</button>
+      </div>
+    </div>
+    <div id="accountsCarousel" style="display: flex; gap: 12px; overflow-x: auto; padding: 8px 0; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; margin-bottom: 8px;">
+      <!-- Llenado dinámico -->
+    </div>
+
     <div class="quick-actions">
       <button class="action-item" id="btnAddTransaction">
         <div class="action-icon" style="background: var(--accent-gradient); border: none;">
@@ -145,6 +157,13 @@ import BottomNav from '../components/BottomNav.astro';
         </div>
 
         <div class="form-group">
+          <label class="form-label">Cuenta</label>
+          <select class="form-input" id="txAccount" required style="appearance: none; padding-right: 32px; background-color: var(--input-bg); color: var(--text-primary);">
+            <option value="principal" style="color: black;">Cuenta Principal</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label class="form-label">Monto</label>
           <input type="text" inputmode="numeric" class="form-input" id="txAmount" placeholder="Ej: 15.000" required>
         </div>
@@ -199,10 +218,35 @@ import BottomNav from '../components/BottomNav.astro';
       </form>
     </div>
   </div>
+
+  <!-- Modal para Nueva Cuenta -->
+  <div class="modal-overlay" id="accountModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Nueva Cuenta</h3>
+        <button class="close-btn" id="closeAccountModalBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 24px; height: 24px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <form id="accountForm">
+        <div class="form-group">
+          <label class="form-label">Nombre de la cuenta</label>
+          <input type="text" class="form-input" id="accName" placeholder="Ej: Cuenta Ahorro" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Saldo Inicial</label>
+          <input type="text" inputmode="numeric" class="form-input" id="accBalance" placeholder="Ej: 100.000" required>
+        </div>
+        <button type="submit" class="submit-btn" id="saveAccountBtn">Crear Cuenta</button>
+      </form>
+    </div>
+  </div>
 </Layout>
 
 <script>
-  import { auth, transactionsCol, goalsCol, subscriptionsCol, addTransaction, addGoal, deleteTransactionDb, updateTransactionDb, onSnapshot, query, where, updateDoc, doc, deleteDoc, db } from '../lib/firebase.js';
+  import { auth, accountsCol, addAccount, transactionsCol, goalsCol, subscriptionsCol, addTransaction, addGoal, deleteTransactionDb, updateTransactionDb, onSnapshot, query, where, updateDoc, doc, deleteDoc, db } from '../lib/firebase.js';
 
   let currentType = 'expense';
   let allTransactions = [];
@@ -212,9 +256,12 @@ import BottomNav from '../components/BottomNav.astro';
   let unsubscribeTx = null;
   let unsubscribeGoals = null;
   let unsubscribeSubs = null;
+  let unsubscribeAccounts = null;
   let allGoals = [];
   let allSubscriptions = [];
+  let allAccounts = [];
   let currentGoalToDeposit = null;
+  let accountsVisible = true;
 
   const listEl = document.getElementById('transaction-list');
   const balanceEl = document.getElementById('total-balance');
@@ -247,6 +294,16 @@ import BottomNav from '../components/BottomNav.astro';
   const depositForm = document.getElementById('depositForm');
   const saveDepositBtn = document.getElementById('saveDepositBtn');
   const depositSubtitle = document.getElementById('depositSubtitle');
+
+  // Accounts
+  const accountModal = document.getElementById('accountModal');
+  const closeAccountModalBtn = document.getElementById('closeAccountModalBtn');
+  const openAccountModalBtn = document.getElementById('openAccountModalBtn');
+  const accountForm = document.getElementById('accountForm');
+  const saveAccountBtn = document.getElementById('saveAccountBtn');
+  const accountsCarousel = document.getElementById('accountsCarousel');
+  const toggleAccountsBtn = document.getElementById('toggleAccountsBtn');
+  const txAccountSelect = document.getElementById('txAccount');
 
   const formatCurrency = (amount) => Math.round(Math.abs(amount)).toLocaleString('es-CL') + ' CLP';
 
@@ -288,17 +345,69 @@ import BottomNav from '../components/BottomNav.astro';
     
     // Add subscriptions to expenses
     const subsTotal = allSubscriptions.reduce((acc, sub) => acc + parseFloat(sub.amount), 0);
-    if (monthFilter.value !== 'all') { // Optional logic, but let's just subtract it always to reflect monthly burden
-      expense -= subsTotal;
-    } else {
-      expense -= subsTotal; // Even for all time, we just subtract it once as an active burden (simplification)
-    }
+    expense -= subsTotal;
 
-    const balance = income + expense;
+    // Calcular saldos por cuenta
+    let accountsBalance = { 'principal': { name: 'Cuenta Principal', balance: 0, isDefault: true } };
+    allAccounts.forEach(acc => {
+      accountsBalance[acc.id] = { name: acc.name, balance: acc.initialBalance || 0 };
+    });
 
-    balanceEl.textContent = formatCurrency(balance);
+    displayedTransactions.forEach(t => {
+      const accId = t.accountId || 'principal';
+      if (!accountsBalance[accId]) {
+        accountsBalance[accId] = { name: 'Cuenta Eliminada', balance: 0 };
+      }
+      accountsBalance[accId].balance += t.amount;
+    });
+
+    // Descontar suscripciones de la cuenta principal como simplificación
+    accountsBalance['principal'].balance -= subsTotal;
+
+    let globalBalance = 0;
+    const accKeys = Object.keys(accountsBalance);
+    
+    // Poblar Carrusel
+    accountsCarousel.innerHTML = '';
+    let hasPrincipal = false;
+    
+    accKeys.forEach(key => {
+      const acc = accountsBalance[key];
+      globalBalance += acc.balance;
+      
+      // Ocultar principal si no hay transacciones y hay otras cuentas
+      if (acc.isDefault && acc.balance === 0 && allAccounts.length > 0) return;
+      if (acc.isDefault) hasPrincipal = true;
+
+      const div = document.createElement('div');
+      div.style.minWidth = '140px';
+      div.style.background = 'var(--card-bg)';
+      div.style.border = '1px solid var(--card-border)';
+      div.style.borderRadius = '16px';
+      div.style.padding = '12px';
+      div.style.scrollSnapAlign = 'start';
+      div.innerHTML = `
+        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${acc.name}</div>
+        <div style="font-weight: 600; font-size: 1.1rem; filter: ${accountsVisible ? 'none' : 'blur(5px)'}; transition: filter 0.3s ease;" class="account-balance-text">${formatCurrency(acc.balance)}</div>
+      `;
+      accountsCarousel.appendChild(div);
+    });
+
+    balanceEl.textContent = formatCurrency(globalBalance);
+    balanceEl.style.filter = accountsVisible ? 'none' : 'blur(8px)';
     incomeEl.textContent = formatCurrency(income);
     expenseEl.textContent = formatCurrency(expense);
+
+    // Actualizar select de cuentas en modal de transacciones
+    const currentTxAcc = txAccountSelect.value;
+    txAccountSelect.innerHTML = '';
+    if (hasPrincipal || allAccounts.length === 0) {
+      txAccountSelect.innerHTML += `<option value="principal" style="color: black;">Cuenta Principal</option>`;
+    }
+    allAccounts.forEach(acc => {
+      txAccountSelect.innerHTML += `<option value="${acc.id}" style="color: black;">${acc.name}</option>`;
+    });
+    if (currentTxAcc) txAccountSelect.value = currentTxAcc;
 
     listEl.innerHTML = '';
     
@@ -441,6 +550,17 @@ import BottomNav from '../components/BottomNav.astro';
       });
       filterTransactions(); // re-calculate totals
     });
+
+    // Listen Accounts
+    if (unsubscribeAccounts) unsubscribeAccounts();
+    const qAcc = query(accountsCol, where("userId", "==", user.uid));
+    unsubscribeAccounts = onSnapshot(qAcc, (snapshot) => {
+      allAccounts = [];
+      snapshot.forEach(doc => {
+        allAccounts.push({ id: doc.id, ...doc.data() });
+      });
+      filterTransactions(); // re-calculate totals with new accounts
+    });
   };
 
   auth.onAuthStateChanged((user) => {
@@ -461,6 +581,13 @@ import BottomNav from '../components/BottomNav.astro';
     document.getElementById('txTitle').value = title;
     document.getElementById('txCategory').value = category;
     document.getElementById('txAmount').value = Math.abs(amount);
+    
+    const tx = allTransactions.find(t => t.id === id);
+    if (tx && tx.accountId) {
+      document.getElementById('txAccount').value = tx.accountId;
+    } else {
+      document.getElementById('txAccount').value = 'principal';
+    }
     
     const isIncome = amount > 0;
     currentType = isIncome ? 'income' : 'expense';
@@ -528,15 +655,16 @@ import BottomNav from '../components/BottomNav.astro';
     
     const title = document.getElementById('txTitle').value;
     const category = document.getElementById('txCategory').value;
+    const accountId = document.getElementById('txAccount').value;
     const rawAmount = document.getElementById('txAmount').value;
     const amountVal = parseFloat(rawAmount.replace(/\./g, '').replace(/,/g, '.'));
     
     if (title && !isNaN(amountVal)) {
       const finalAmount = currentType === 'expense' ? -amountVal : amountVal;
       if (editingTxId) {
-        await updateTransactionDb(editingTxId, { title, category, amount: finalAmount });
+        await updateTransactionDb(editingTxId, { title, category, accountId, amount: finalAmount });
       } else {
-        await addTransaction({ title, category, amount: finalAmount, date: getFormattedDate(), userId: currentUser.uid });
+        await addTransaction({ title, category, accountId, amount: finalAmount, date: getFormattedDate(), userId: currentUser.uid });
       }
     }
     modal.classList.remove('active'); form.reset(); submitBtn.disabled = false; submitBtn.textContent = 'Guardar Transacción';
@@ -575,6 +703,32 @@ import BottomNav from '../components/BottomNav.astro';
       await updateDoc(doc(db, "goals", currentGoalToDeposit.id), { current: newCurrent });
     }
     depositModal.classList.remove('active'); depositForm.reset(); saveDepositBtn.disabled = false; saveDepositBtn.textContent = 'Sumar a la Meta';
+  });
+
+  // Toggle Eye Accounts
+  toggleAccountsBtn.addEventListener('click', () => {
+    accountsVisible = !accountsVisible;
+    toggleAccountsBtn.textContent = accountsVisible ? '👁️' : '🙈';
+    updateUI();
+  });
+
+  // Accounts Handlers
+  openAccountModalBtn.addEventListener('click', () => accountModal.classList.add('active'));
+  closeAccountModalBtn.addEventListener('click', () => { accountModal.classList.remove('active'); accountForm.reset(); });
+  
+  accountForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    saveAccountBtn.disabled = true; saveAccountBtn.textContent = 'Creando...';
+    
+    const name = document.getElementById('accName').value;
+    const rawBalance = document.getElementById('accBalance').value;
+    const initialBalance = parseFloat(rawBalance.replace(/\./g, '').replace(/,/g, '.'));
+    
+    if(name && !isNaN(initialBalance)) {
+      await addAccount({ userId: currentUser.uid, name, initialBalance });
+    }
+    accountModal.classList.remove('active'); accountForm.reset(); saveAccountBtn.disabled = false; saveAccountBtn.textContent = 'Crear Cuenta';
   });
 
 </script>
