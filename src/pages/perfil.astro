@@ -41,7 +41,7 @@ import BottomNav from '../components/BottomNav.astro';
     <!-- Sección de Suscripciones -->
     <div class="section-header" style="margin-top: 32px; display: flex; justify-content: space-between; align-items: center;">
       <h2 class="section-title">Suscripciones Fijas</h2>
-      <button id="openSubModalBtn" style="background: var(--accent); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 1.2rem; cursor: pointer;">+</button>
+      <button id="openSubModalBtn" onclick="document.getElementById('subModal').classList.add('active')" style="background: var(--accent); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 1.2rem; cursor: pointer;">+</button>
     </div>
     <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px; padding: 16px;">
       <div id="subsList">
@@ -100,7 +100,7 @@ import BottomNav from '../components/BottomNav.astro';
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Nueva Suscripción</h3>
-        <button class="close-btn" id="closeSubModalBtn">
+        <button class="close-btn" id="closeSubModalBtn" onclick="document.getElementById('subModal').classList.remove('active'); document.getElementById('subForm').reset();">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 24px; height: 24px;">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -216,10 +216,6 @@ import BottomNav from '../components/BottomNav.astro';
     window.deleteSub = async (id) => {
       await deleteSubscriptionDb(id);
     };
-
-    // Modal Suscripciones
-    openSubModalBtn.addEventListener('click', () => subModal.classList.add('active'));
-    closeSubModalBtn.addEventListener('click', () => { subModal.classList.remove('active'); subForm.reset(); });
 
     subForm.addEventListener('submit', async (e) => {
       e.preventDefault();
