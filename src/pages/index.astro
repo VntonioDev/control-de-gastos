@@ -377,7 +377,10 @@ import BottomNav from '../components/BottomNav.astro';
         accountsBalance[accId].balance += t.amount;
       });
 
-      accountsBalance[defaultAccId].balance -= subsTotal;
+      const defaultAccId = allAccounts[0].id;
+      if (accountsBalance[defaultAccId]) {
+        accountsBalance[defaultAccId].balance -= subsTotal;
+      }
 
       const accKeys = Object.keys(accountsBalance);
       accKeys.forEach(key => {
