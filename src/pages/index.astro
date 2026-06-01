@@ -259,60 +259,104 @@ import BottomNav from '../components/BottomNav.astro';
 </Layout>
 
 <script>
-  import { auth, accountsCol, addAccount, deleteAccountDb, transactionsCol, goalsCol, subscriptionsCol, addTransaction, addGoal, deleteTransactionDb, updateTransactionDb, onSnapshot, query, where, updateDoc, doc, deleteDoc, db } from '../lib/firebase.js';
+// @ts-nocheck
+  import { auth, accountsCol, addAccount, deleteAccountDb, transactionsCol, goalsCol, subscriptionsCol, addTransaction, addGoal, deleteTransactionDb, updateTransactionDb, onSnapshot, query, where, orderBy, updateDoc, doc, deleteDoc, db } from '../lib/firebase.js';
 
   let currentType = 'expense';
+  /** @type {Array<any>} */
   let allTransactions = [];
+  /** @type {Array<any>} */
   let displayedTransactions = [];
+  /** @type {any} */
   let currentUser = null;
+  /** @type {string | null} */
   let editingTxId = null;
   let unsubscribeTx = null;
   let unsubscribeGoals = null;
   let unsubscribeSubs = null;
   let unsubscribeAccounts = null;
+  /** @type {Array<any>} */
   let allGoals = [];
+  /** @type {Array<any>} */
   let allSubscriptions = [];
+  /** @type {Array<any>} */
   let allAccounts = [];
+  /** @type {any} */
   let currentGoalToDeposit = null;
   let accountsVisible = true;
 
-  const listEl = document.getElementById('transaction-list');
-  const userNameDisplay = document.getElementById('userNameDisplay');
-  const monthFilter = document.getElementById('monthFilter');
+  const assertElementById = (id) => {
+    const el = document.getElementById(id);
+    if (!(el instanceof HTMLElement)) throw new Error(`Missing element ${id}`);
+    return el;
+  };
+  const assertButtonById = (id) => {
+    const el = document.getElementById(id);
+    if (!(el instanceof HTMLButtonElement)) throw new Error(`Missing button ${id}`);
+    return el;
+  };
+  const assertFormById = (id) => {
+    const el = document.getElementById(id);
+    if (!(el instanceof HTMLFormElement)) throw new Error(`Missing form ${id}`);
+    return el;
+  };
+  const assertButton = (el) => {
+    if (!(el instanceof HTMLButtonElement)) throw new Error('Missing button element');
+    return el;
+  };
+  const assertInputById = (id) => {
+    const el = document.getElementById(id);
+    if (!(el instanceof HTMLInputElement)) throw new Error(`Missing input ${id}`);
+    return el;
+  };
+  const assertSelectById = (id) => {
+    const el = document.getElementById(id);
+    if (!(el instanceof HTMLSelectElement)) throw new Error(`Missing select ${id}`);
+    return el;
+  };
+  const assertQuery = (selector) => {
+    const el = document.querySelector(selector);
+    if (!(el instanceof HTMLElement)) throw new Error(`Missing element ${selector}`);
+    return el;
+  };
+
+  const listEl = assertElementById('transaction-list');
+  const userNameDisplay = assertElementById('userNameDisplay');
+  const monthFilter = assertSelectById('monthFilter');
   
   // Tx Modal
-  const modal = document.getElementById('transactionModal');
-  const btnAdd = document.getElementById('btnAddTransaction');
-  const btnReceive = document.getElementById('btnReceive');
-  const btnClose = document.getElementById('closeModalBtn');
-  const form = document.getElementById('transactionForm');
-  const typeBtns = document.querySelectorAll('.type-btn');
-  const btnIncomeType = document.querySelector('.type-btn.income');
-  const submitBtn = document.getElementById('submitBtn');
+  const modal = assertElementById('transactionModal');
+  const btnAdd = assertButtonById('btnAddTransaction');
+  const btnReceive = assertButtonById('btnReceive');
+  const btnClose = assertButtonById('closeModalBtn');
+  const form = assertFormById('transactionForm');
+  const typeBtns = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.type-btn'));
+  const btnIncomeType = /** @type {HTMLButtonElement} */ (assertQuery('.type-btn.income'));
+  const submitBtn = assertButtonById('submitBtn');
 
   // Goals
-  const goalsList = document.getElementById('goalsList');
-  const openGoalModalBtn = document.getElementById('openGoalModalBtn');
-  const goalModal = document.getElementById('goalModal');
-  const closeGoalModalBtn = document.getElementById('closeGoalModalBtn');
-  const goalForm = document.getElementById('goalForm');
-  const saveGoalBtn = document.getElementById('saveGoalBtn');
+  const goalsList = assertElementById('goalsList');
+  const openGoalModalBtn = assertButtonById('openGoalModalBtn');
+  const goalModal = assertElementById('goalModal');
+  const closeGoalModalBtn = assertButtonById('closeGoalModalBtn');
+  const goalForm = assertFormById('goalForm');
+  const saveGoalBtn = assertButtonById('saveGoalBtn');
 
   // Deposit
-  const depositModal = document.getElementById('depositModal');
-  const closeDepositModalBtn = document.getElementById('closeDepositModalBtn');
-  const depositForm = document.getElementById('depositForm');
-  const saveDepositBtn = document.getElementById('saveDepositBtn');
-  const depositSubtitle = document.getElementById('depositSubtitle');
+  const depositModal = assertElementById('depositModal');
+  const closeDepositModalBtn = assertButtonById('closeDepositModalBtn');
+  const depositForm = assertFormById('depositForm');
+  const saveDepositBtn = assertButtonById('saveDepositBtn');
+  const depositSubtitle = assertElementById('depositSubtitle');
 
   // Accounts
-  const accountModal = document.getElementById('accountModal');
-  const closeAccountModalBtn = document.getElementById('closeAccountModalBtn');
-  const openAccountModalBtn = document.getElementById('openAccountModalBtn');
-  const accountForm = document.getElementById('accountForm');
-  const saveAccountBtn = document.getElementById('saveAccountBtn');
-  const accountsCarousel = document.getElementById('accountsCarousel');
-  const txAccountSelect = document.getElementById('txAccount');
+  const accountModal = assertElementById('accountModal');
+  const closeAccountModalBtn = assertButtonById('closeAccountModalBtn');
+  const openAccountModalBtn = assertButtonById('openAccountModalBtn');
+  const accountForm = assertFormById('accountForm');
+  const saveAccountBtn = assertButtonById('saveAccountBtn');
+  const accountsCarousel = assertElementById('accountsCarousel');
+  const txAccountSelect = assertSelectById('txAccount');
 
   const formatCurrency = (amount) => Math.round(Math.abs(amount)).toLocaleString('es-CL') + ' CLP';
 
@@ -349,28 +393,23 @@ import BottomNav from '../components/BottomNav.astro';
   monthFilter.addEventListener('change', filterTransactions);
 
   const updateUI = () => {
-    let income = displayedTransactions.filter(t => t.amount > 0).reduce((acc, t) => acc + t.amount, 0);
-    let expense = displayedTransactions.filter(t => t.amount < 0).reduce((acc, t) => acc + t.amount, 0);
-    
-    // Add subscriptions to expenses
-    const subsTotal = allSubscriptions.reduce((acc, sub) => acc + parseFloat(sub.amount), 0);
+    const income = displayedTransactions.reduce((acc, t) => acc + (t.amount > 0 ? t.amount : 0), 0);
+    let expense = displayedTransactions.reduce((acc, t) => acc + (t.amount < 0 ? t.amount : 0), 0);
+    const subsTotal = allSubscriptions.reduce((acc, sub) => acc + parseFloat(sub.amount || 0), 0);
     expense -= subsTotal;
 
-    // Calcular saldos por cuenta
-    let accountsBalance = {};
+    const accountsBalance = {};
+    const accountsFragment = document.createDocumentFragment();
     let globalBalance = 0;
-    accountsCarousel.innerHTML = '';
 
     if (allAccounts.length > 0) {
       allAccounts.forEach(acc => {
         accountsBalance[acc.id] = { name: acc.name, balance: acc.initialBalance || 0 };
       });
-      
+
       displayedTransactions.forEach(t => {
-        let accId = t.accountId;
-        if (!accId || accId === 'principal' || accId === 'none' || !accountsBalance[accId]) {
-          return; // No afecta ninguna cuenta
-        }
+        const accId = t.accountId;
+        if (!accId || accId === 'principal' || accId === 'none' || !accountsBalance[accId]) return;
         accountsBalance[accId].balance += t.amount;
       });
 
@@ -379,12 +418,8 @@ import BottomNav from '../components/BottomNav.astro';
         accountsBalance[defaultAccId].balance -= subsTotal;
       }
 
-      const accKeys = Object.keys(accountsBalance);
-      accKeys.forEach(key => {
-        const acc = accountsBalance[key];
-        const accId = key;
+      Object.entries(accountsBalance).forEach(([accId, acc]) => {
         globalBalance += acc.balance;
-
         const div = document.createElement('div');
         div.style.minWidth = '140px';
         div.style.background = 'var(--card-bg)';
@@ -400,7 +435,7 @@ import BottomNav from '../components/BottomNav.astro';
           </div>
           <div style="font-weight: 600; font-size: 1.1rem;" class="account-balance-text">${formatCurrency(acc.balance)}</div>
         `;
-        accountsCarousel.appendChild(div);
+        accountsFragment.appendChild(div);
       });
     } else {
       globalBalance = income + expense;
@@ -408,10 +443,9 @@ import BottomNav from '../components/BottomNav.astro';
       div.style.color = 'var(--text-secondary)';
       div.style.fontSize = '0.85rem';
       div.textContent = 'No tienes cuentas creadas.';
-      accountsCarousel.appendChild(div);
+      accountsFragment.appendChild(div);
     }
 
-    // Append 'Add Account' card
     const addAccDiv = document.createElement('div');
     addAccDiv.style.minWidth = '140px';
     addAccDiv.style.background = 'rgba(255, 255, 255, 0.05)';
@@ -429,19 +463,21 @@ import BottomNav from '../components/BottomNav.astro';
       <div style="font-size: 1.5rem; color: var(--text-secondary); margin-bottom: 4px;">+</div>
       <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Agregar Cuenta</div>
     `;
-    accountsCarousel.appendChild(addAccDiv);
+    accountsFragment.appendChild(addAccDiv);
+
+    accountsCarousel.innerHTML = '';
+    accountsCarousel.appendChild(accountsFragment);
 
     document.getElementById('balanceAmount').textContent = formatCurrency(Math.abs(expense));
     document.getElementById('globalBalanceAmount').textContent = formatCurrency(globalBalance);
     document.getElementById('incomeAmount').textContent = formatCurrency(income);
 
-    // Actualizar select de cuentas en modal de transacciones
     const currentTxAcc = txAccountSelect.value;
-    txAccountSelect.innerHTML = `<option value="none" style="color: black;">Ninguna (Solo registrar)</option>`;
-    
-    allAccounts.forEach(acc => {
-      txAccountSelect.innerHTML += `<option value="${acc.id}" style="color: black;">${acc.name}</option>`;
-    });
+    const txOptions = [
+      '<option value="none" style="color: black;">Ninguna (Solo registrar)</option>',
+      ...allAccounts.map(acc => `<option value="${acc.id}" style="color: black;">${acc.name}</option>`)
+    ];
+    txAccountSelect.innerHTML = txOptions.join('');
 
     if (currentTxAcc && (currentTxAcc === 'none' || allAccounts.some(a => a.id === currentTxAcc))) {
       txAccountSelect.value = currentTxAcc;
@@ -452,13 +488,12 @@ import BottomNav from '../components/BottomNav.astro';
     }
 
     listEl.innerHTML = '';
-    
     if (displayedTransactions.length === 0 && subsTotal === 0) {
       listEl.innerHTML = '<div class="empty-state">No hay transacciones en este periodo.</div>';
       return;
     }
 
-    // Dummy transaction for subscriptions
+    const listFragment = document.createDocumentFragment();
     if (subsTotal > 0) {
       const div = document.createElement('div');
       div.className = 'transaction-item';
@@ -478,17 +513,16 @@ import BottomNav from '../components/BottomNav.astro';
           -${formatCurrency(subsTotal)}
         </div>
       `;
-      listEl.appendChild(div);
+      listFragment.appendChild(div);
     }
 
     displayedTransactions.forEach(tx => {
       const isPositive = tx.amount > 0;
-      let colorCode = isPositive ? '#34d399' : '#f87171';
-      let bgStyle = isPositive ? 'background-color: rgba(52, 211, 153, 0.2)' : 'background-color: rgba(248, 113, 113, 0.2)';
-      let iconSvg = isPositive 
+      const colorCode = isPositive ? '#34d399' : '#f87171';
+      const bgStyle = isPositive ? 'background-color: rgba(52, 211, 153, 0.2)' : 'background-color: rgba(248, 113, 113, 0.2)';
+      const iconSvg = isPositive 
         ? '<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6.75-6.75M12 19.5l-6.75-6.75" />' 
         : '<path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />';
-
       const div = document.createElement('div');
       div.className = 'transaction-item';
       div.onclick = () => window.editTransaction(tx.id, tx.title, tx.category, tx.amount);
@@ -509,8 +543,10 @@ import BottomNav from '../components/BottomNav.astro';
         </div>
         <button class="delete-btn" onclick="event.stopPropagation(); window.deleteTransaction('${tx.id}')" title="Eliminar">×</button>
       `;
-      listEl.appendChild(div);
+      listFragment.appendChild(div);
     });
+
+    listEl.appendChild(listFragment);
   };
 
   const renderGoals = () => {
@@ -520,6 +556,7 @@ import BottomNav from '../components/BottomNav.astro';
       return;
     }
 
+    const fragment = document.createDocumentFragment();
     allGoals.forEach(goal => {
       const percentage = Math.min((goal.current / goal.target) * 100, 100).toFixed(1);
       const div = document.createElement('div');
@@ -551,8 +588,9 @@ import BottomNav from '../components/BottomNav.astro';
           </div>
         </div>
       `;
-      goalsList.appendChild(div);
+      fragment.appendChild(div);
     });
+    goalsList.appendChild(fragment);
   };
 
   const loadUserData = (user) => {
@@ -561,13 +599,12 @@ import BottomNav from '../components/BottomNav.astro';
 
     // Listen Transactions
     if (unsubscribeTx) unsubscribeTx();
-    const qTx = query(transactionsCol, where("userId", "==", user.uid));
+    const qTx = query(transactionsCol, where("userId", "==", user.uid), orderBy("createdAt", "desc"));
     unsubscribeTx = onSnapshot(qTx, (snapshot) => {
       allTransactions = [];
       snapshot.forEach((doc) => {
         allTransactions.push({ id: doc.id, ...doc.data() });
       });
-      allTransactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       filterTransactions();
     });
 
@@ -643,8 +680,8 @@ import BottomNav from '../components/BottomNav.astro';
     const targetAccId = deleteAccountAction.value;
     const txsToUpdate = allTransactions.filter(t => t.accountId === accountToDelete);
     
-    for(let t of txsToUpdate) {
-      await updateTransactionDb(t.id, { accountId: targetAccId });
+    if (txsToUpdate.length > 0) {
+      await Promise.all(txsToUpdate.map(t => updateTransactionDb(t.id, { accountId: targetAccId })));
     }
     
     await deleteAccountDb(accountToDelete);
@@ -656,22 +693,30 @@ import BottomNav from '../components/BottomNav.astro';
   });
   window.editTransaction = (id, title, category, amount) => {
     editingTxId = id;
-    document.querySelector('.modal-title').textContent = 'Editar Transacción';
+    const modalTitle = assertQuery('.modal-title');
+    const txTitle = assertInputById('txTitle');
+    const txCategory = assertSelectById('txCategory');
+    const txAmount = assertInputById('txAmount');
+    const txAccount = assertSelectById('txAccount');
+    const incomeTypeBtn = /** @type {HTMLButtonElement} */ (assertQuery('.type-btn.income'));
+    const expenseTypeBtn = /** @type {HTMLButtonElement} */ (assertQuery('.type-btn.expense'));
+
+    modalTitle.textContent = 'Editar Transacción';
     submitBtn.textContent = 'Actualizar Transacción';
     
-    document.getElementById('txTitle').value = title;
-    document.getElementById('txCategory').value = category;
-    document.getElementById('txAmount').value = Math.abs(amount);
+    txTitle.value = title;
+    txCategory.value = category;
+    txAmount.value = String(Math.abs(amount));
     
     const tx = allTransactions.find(t => t.id === id);
     if (tx && tx.accountId === 'none') {
-      document.getElementById('txAccount').value = 'none';
+      txAccount.value = 'none';
     } else if (tx && tx.accountId && allAccounts.some(a => a.id === tx.accountId)) {
-      document.getElementById('txAccount').value = tx.accountId;
+      txAccount.value = tx.accountId;
     } else if (allAccounts.length > 0) {
-      document.getElementById('txAccount').value = allAccounts[0].id;
+      txAccount.value = allAccounts[0].id;
     } else {
-      document.getElementById('txAccount').value = 'none';
+      txAccount.value = 'none';
     }
     
     const isIncome = amount > 0;
@@ -679,13 +724,13 @@ import BottomNav from '../components/BottomNav.astro';
     
     typeBtns.forEach(b => b.classList.remove('active'));
     if (isIncome) {
-      document.querySelector('.type-btn.income').classList.add('active');
-      document.getElementById('txCategory').innerHTML = `<option value="Salario" style="color: black;">Salario</option><option value="Regalo" style="color: black;">Regalo</option><option value="Inversión" style="color: black;">Inversión</option><option value="Otros" style="color: black;">Otros</option>`;
-      document.getElementById('txCategory').value = category;
+      incomeTypeBtn.classList.add('active');
+      txCategory.innerHTML = `<option value="Salario" style="color: black;">Salario</option><option value="Regalo" style="color: black;">Regalo</option><option value="Inversión" style="color: black;">Inversión</option><option value="Otros" style="color: black;">Otros</option>`;
+      txCategory.value = category;
     } else {
-      document.querySelector('.type-btn.expense').classList.add('active');
-      document.getElementById('txCategory').innerHTML = `<option value="Alimentación" style="color: black;">Alimentación</option><option value="Transporte" style="color: black;">Transporte</option><option value="Ocio" style="color: black;">Ocio</option><option value="Servicios" style="color: black;">Servicios</option><option value="Salud" style="color: black;">Salud</option><option value="Otros" style="color: black;">Otros</option>`;
-      document.getElementById('txCategory').value = category;
+      expenseTypeBtn.classList.add('active');
+      txCategory.innerHTML = `<option value="Alimentación" style="color: black;">Alimentación</option><option value="Transporte" style="color: black;">Transporte</option><option value="Ocio" style="color: black;">Ocio</option><option value="Servicios" style="color: black;">Servicios</option><option value="Salud" style="color: black;">Salud</option><option value="Otros" style="color: black;">Otros</option>`;
+      txCategory.value = category;
     }
     
     modal.classList.add('active');
@@ -703,28 +748,30 @@ import BottomNav from '../components/BottomNav.astro';
   };
 
   // Transaction form handlers
-  btnAdd.addEventListener('click', () => { 
+  btnAdd?.addEventListener('click', () => { 
     editingTxId = null; 
-    document.querySelector('.modal-title').textContent = 'Nueva Transacción'; 
+    const modalTitle = assertQuery('.modal-title');
+    modalTitle.textContent = 'Nueva Transacción'; 
     submitBtn.textContent = 'Guardar Transacción'; 
     modal.classList.add('active'); 
-    setTimeout(() => document.getElementById('txTitle').focus(), 100); 
+    setTimeout(() => assertInputById('txTitle').focus(), 100); 
   });
-  btnReceive.addEventListener('click', () => { 
+  btnReceive?.addEventListener('click', () => { 
     editingTxId = null; 
-    document.querySelector('.modal-title').textContent = 'Nueva Transacción'; 
+    const modalTitle = assertQuery('.modal-title');
+    modalTitle.textContent = 'Nueva Transacción'; 
     submitBtn.textContent = 'Guardar Transacción'; 
     modal.classList.add('active'); 
     btnIncomeType.click(); 
-    setTimeout(() => document.getElementById('txTitle').focus(), 100); 
+    setTimeout(() => assertInputById('txTitle').focus(), 100); 
   });
-  btnClose.addEventListener('click', () => { modal.classList.remove('active'); form.reset(); editingTxId = null; });
+  btnClose?.addEventListener('click', () => { modal.classList.remove('active'); form.reset(); editingTxId = null; });
   typeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       typeBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentType = btn.dataset.type;
-      const catSelect = document.getElementById('txCategory');
+      const catSelect = assertSelectById('txCategory');
       if (currentType === 'income') {
         catSelect.innerHTML = `<option value="Salario" style="color: black;">Salario</option><option value="Regalo" style="color: black;">Regalo</option><option value="Inversión" style="color: black;">Inversión</option><option value="Otros" style="color: black;">Otros</option>`;
       } else {
@@ -733,15 +780,15 @@ import BottomNav from '../components/BottomNav.astro';
     });
   });
 
-  form.addEventListener('submit', async (e) => {
+  form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) return;
     submitBtn.disabled = true; submitBtn.textContent = 'Guardando...';
     
-    const title = document.getElementById('txTitle').value;
-    const category = document.getElementById('txCategory').value;
-    const accountId = document.getElementById('txAccount').value;
-    const rawAmount = document.getElementById('txAmount').value;
+    const title = assertInputById('txTitle').value;
+    const category = assertSelectById('txCategory').value;
+    const accountId = assertSelectById('txAccount').value;
+    const rawAmount = assertInputById('txAmount').value;
     const amountVal = parseFloat(rawAmount.replace(/\./g, '').replace(/,/g, '.'));
     
     if (title && !isNaN(amountVal)) {
@@ -757,16 +804,16 @@ import BottomNav from '../components/BottomNav.astro';
   });
 
   // Goals handlers
-  openGoalModalBtn.addEventListener('click', () => goalModal.classList.add('active'));
-  closeGoalModalBtn.addEventListener('click', () => { goalModal.classList.remove('active'); goalForm.reset(); });
+  openGoalModalBtn?.addEventListener('click', () => goalModal.classList.add('active'));
+  closeGoalModalBtn?.addEventListener('click', () => { goalModal.classList.remove('active'); goalForm.reset(); });
   
-  goalForm.addEventListener('submit', async (e) => {
+  goalForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) return;
     saveGoalBtn.disabled = true; saveGoalBtn.textContent = 'Creando...';
     
-    const title = document.getElementById('goalTitle').value;
-    const rawTarget = document.getElementById('goalAmount').value;
+    const title = assertInputById('goalTitle').value;
+    const rawTarget = assertInputById('goalAmount').value;
     const target = parseFloat(rawTarget.replace(/\./g, '').replace(/,/g, '.'));
     if(title && !isNaN(target)) {
       await addGoal({ userId: currentUser.uid, title, target, current: 0 });
@@ -775,13 +822,13 @@ import BottomNav from '../components/BottomNav.astro';
   });
 
   // Deposit handlers
-  closeDepositModalBtn.addEventListener('click', () => { depositModal.classList.remove('active'); depositForm.reset(); });
-  depositForm.addEventListener('submit', async (e) => {
+  closeDepositModalBtn?.addEventListener('click', () => { depositModal.classList.remove('active'); depositForm.reset(); });
+  depositForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentGoalToDeposit) return;
     saveDepositBtn.disabled = true; saveDepositBtn.textContent = 'Sumando...';
 
-    const rawAmt = document.getElementById('depositAmount').value;
+    const rawAmt = assertInputById('depositAmount').value;
     const amt = parseFloat(rawAmt.replace(/\./g, '').replace(/,/g, '.'));
     if(!isNaN(amt)) {
       const newCurrent = currentGoalToDeposit.current + amt;
@@ -791,18 +838,18 @@ import BottomNav from '../components/BottomNav.astro';
   });
 
   // Accounts Handlers
-  openAccountModalBtn.addEventListener('click', () => accountModal.classList.add('active'));
-  closeAccountModalBtn.addEventListener('click', () => { accountModal.classList.remove('active'); accountForm.reset(); });
-  accountForm.addEventListener('submit', async (e) => {
+  openAccountModalBtn?.addEventListener('click', () => accountModal.classList.add('active'));
+  closeAccountModalBtn?.addEventListener('click', () => { accountModal.classList.remove('active'); accountForm.reset(); });
+  accountForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUser) return;
 
-    const name = document.getElementById('accName').value;
-    const initialBalanceStr = document.getElementById('accBalance').value.replace(/\./g, '');
+    const name = assertInputById('accName').value;
+    const initialBalanceStr = assertInputById('accBalance').value.replace(/\./g, '');
     const initialBalance = parseFloat(initialBalanceStr);
 
     if (name && !isNaN(initialBalance)) {
-      const submitBtn = accountForm.querySelector('.submit-btn');
+      const submitBtn = assertButton(accountForm.querySelector('.submit-btn'));
       submitBtn.disabled = true;
       submitBtn.textContent = 'Guardando...';
 
@@ -816,16 +863,15 @@ import BottomNav from '../components/BottomNav.astro';
         const orphanedTxs = allTransactions.filter(t => !t.accountId || t.accountId === 'principal' || t.accountId === 'none');
         if (orphanedTxs.length > 0) {
           if(confirm(`Tienes ${orphanedTxs.length} transacciones sin cuenta asignada. ¿Quieres asociarlas a esta nueva cuenta para que se descuenten/sumen de aquí?`)) {
-            for(let t of orphanedTxs) {
-              await updateTransactionDb(t.id, { accountId: newAccId });
-            }
+            await Promise.all(orphanedTxs.map(t => updateTransactionDb(t.id, { accountId: newAccId })));
           }
         }
 
-        document.getElementById('accountModal').classList.remove('active');
+        assertElementById('accountModal').classList.remove('active');
         accountForm.reset();
       } catch (err) {
-        alert("Error al guardar la cuenta: " + err.message);
+        const message = err instanceof Error ? err.message : String(err);
+        alert("Error al guardar la cuenta: " + message);
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Crear Cuenta';
