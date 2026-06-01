@@ -87,4 +87,4 @@ export const deleteSubscriptionDb = async (id) => {
 
 // Exportamos utilidades para escuchar los cambios
 export { onSnapshot, query, where, orderBy };
-export { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, db, deleteDoc, doc };
+export { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, deleteDoc, doc };
