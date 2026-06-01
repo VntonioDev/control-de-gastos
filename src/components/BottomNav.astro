@@ -31,7 +31,8 @@ const { currentPath } = Astro.props;
     transform: translateX(-50%);
     width: 100%;
     max-width: 480px;
-    height: 80px;
+    height: auto;
+    min-height: 80px;
     background: rgba(15, 17, 26, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -39,7 +40,8 @@ const { currentPath } = Astro.props;
     display: flex;
     justify-content: space-around;
     align-items: center;
-    padding: 0 8px;
+    padding-top: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
     z-index: 10;
   }
 
