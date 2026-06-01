@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, query, where, orderBy, updateDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, query, where, orderBy, updateDoc, enableIndexedDbPersistence } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 const firebaseConfig = {
@@ -14,6 +14,16 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+// Habilitar persistencia offline
+enableIndexedDbPersistence(db).catch((err) => {
+  if (err.code == 'failed-precondition') {
+    console.warn('Multiple tabs open, offline persistence disabled');
+  } else if (err.code == 'unimplemented') {
+    console.warn('Browser does not support offline persistence');
+  }
+});
+
 export const auth = getAuth(app);
 
 // Colección principal
@@ -41,6 +51,16 @@ export const deleteTransactionDb = async (id) => {
     return true;
   } catch (e) {
     console.error("Error deleting document: ", e);
+    return false;
+  }
+};
+
+export const updateTransactionDb = async (id, newData) => {
+  try {
+    await updateDoc(doc(db, "transactions", id), newData);
+    return true;
+  } catch (e) {
+    console.error("Error updating document: ", e);
     return false;
   }
 };

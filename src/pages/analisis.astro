@@ -90,7 +90,7 @@ import BottomNav from '../components/BottomNav.astro';
   <script is:inline src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <script>
-    import { auth, transactionsCol, budgetsCol, setBudget, onSnapshot, query, where, deleteDoc, doc, db } from '../lib/firebase.js';
+    import { auth, transactionsCol, budgetsCol, subscriptionsCol, setBudget, onSnapshot, query, where, deleteDoc, doc, db } from '../lib/firebase.js';
 
     const chartLoading = document.getElementById('chartLoading');
     const categoryList = document.getElementById('category-list');
@@ -104,11 +104,13 @@ import BottomNav from '../components/BottomNav.astro';
     let chartInstance = null;
     let allTransactions = [];
     let displayedTransactions = [];
+    let allSubscriptions = [];
     let userBudgets = {}; // { category: amount }
     let budgetIds = {}; // { category: docId }
     let currentUser = null;
     let unsubscribeTx = null;
     let unsubscribeBg = null;
+    let unsubscribeSubs = null;
 
     const formatCurrency = (amount) => '$' + Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -150,6 +152,12 @@ import BottomNav from '../components/BottomNav.astro';
           categoryTotals[cat] = (categoryTotals[cat] || 0) + Math.abs(tx.amount);
         }
       });
+
+      // Añadir suscripciones si hay
+      const subsTotal = allSubscriptions.reduce((acc, sub) => acc + parseFloat(sub.amount), 0);
+      if (subsTotal > 0) {
+        categoryTotals['Suscripciones Fijas'] = subsTotal;
+      }
 
       // Actualizar Gráfico y Lista de Categorías
       chartLoading.style.display = 'none';
@@ -258,6 +266,17 @@ import BottomNav from '../components/BottomNav.astro';
             budgetIds[data.category] = docSnap.id;
           });
           updateUI(); // Para redibujar barras con nuevos presupuestos
+        });
+
+        // Cargar Suscripciones
+        if (unsubscribeSubs) unsubscribeSubs();
+        const qSubs = query(subscriptionsCol, where("userId", "==", user.uid));
+        unsubscribeSubs = onSnapshot(qSubs, (snapshot) => {
+          allSubscriptions = [];
+          snapshot.forEach(docSnap => {
+            allSubscriptions.push({ id: docSnap.id, ...docSnap.data() });
+          });
+          updateUI(); // Para redibujar gráfico con suscripciones
         });
       }
     });

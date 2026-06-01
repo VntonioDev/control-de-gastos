@@ -202,12 +202,13 @@ import BottomNav from '../components/BottomNav.astro';
 </Layout>
 
 <script>
-  import { auth, transactionsCol, goalsCol, subscriptionsCol, addTransaction, addGoal, deleteTransactionDb, onSnapshot, query, where, updateDoc, doc, deleteDoc, db } from '../lib/firebase.js';
+  import { auth, transactionsCol, goalsCol, subscriptionsCol, addTransaction, addGoal, deleteTransactionDb, updateTransactionDb, onSnapshot, query, where, updateDoc, doc, deleteDoc, db } from '../lib/firebase.js';
 
   let currentType = 'expense';
   let allTransactions = [];
   let displayedTransactions = [];
   let currentUser = null;
+  let editingTxId = null;
   let unsubscribeTx = null;
   let unsubscribeGoals = null;
   let unsubscribeSubs = null;
@@ -339,6 +340,7 @@ import BottomNav from '../components/BottomNav.astro';
 
       const div = document.createElement('div');
       div.className = 'transaction-item';
+      div.onclick = () => window.editTransaction(tx.id, tx.title, tx.category, tx.amount);
       div.innerHTML = `
         <div class="tx-left">
           <div class="tx-icon" style="${bgStyle}">
@@ -354,7 +356,7 @@ import BottomNav from '../components/BottomNav.astro';
         <div class="tx-amount ${isPositive ? 'positive' : ''}" style="${isPositive ? 'color: var(--positive);' : ''}">
           ${isPositive ? '+' : '-'}${formatCurrency(tx.amount)}
         </div>
-        <button class="delete-btn" onclick="window.deleteTransaction('${tx.id}')" title="Eliminar">×</button>
+        <button class="delete-btn" onclick="event.stopPropagation(); window.deleteTransaction('${tx.id}')" title="Eliminar">×</button>
       `;
       listEl.appendChild(div);
     });
@@ -448,7 +450,34 @@ import BottomNav from '../components/BottomNav.astro';
   });
 
   // Export functions to window so inline onclick handlers work
-  window.deleteTransaction = async (id) => await deleteTransactionDb(id);
+  window.deleteTransaction = async (id) => {
+    if(confirm("¿Eliminar transacción?")) await deleteTransactionDb(id);
+  };
+  window.editTransaction = (id, title, category, amount) => {
+    editingTxId = id;
+    document.querySelector('.modal-title').textContent = 'Editar Transacción';
+    submitBtn.textContent = 'Actualizar Transacción';
+    
+    document.getElementById('txTitle').value = title;
+    document.getElementById('txCategory').value = category;
+    document.getElementById('txAmount').value = Math.abs(amount);
+    
+    const isIncome = amount > 0;
+    currentType = isIncome ? 'income' : 'expense';
+    
+    typeBtns.forEach(b => b.classList.remove('active'));
+    if (isIncome) {
+      document.querySelector('.type-btn.income').classList.add('active');
+      document.getElementById('txCategory').innerHTML = `<option value="Salario" style="color: black;">Salario</option><option value="Regalo" style="color: black;">Regalo</option><option value="Inversión" style="color: black;">Inversión</option><option value="Otros" style="color: black;">Otros</option>`;
+      document.getElementById('txCategory').value = category;
+    } else {
+      document.querySelector('.type-btn.expense').classList.add('active');
+      document.getElementById('txCategory').innerHTML = `<option value="Alimentación" style="color: black;">Alimentación</option><option value="Transporte" style="color: black;">Transporte</option><option value="Ocio" style="color: black;">Ocio</option><option value="Servicios" style="color: black;">Servicios</option><option value="Salud" style="color: black;">Salud</option><option value="Otros" style="color: black;">Otros</option>`;
+      document.getElementById('txCategory').value = category;
+    }
+    
+    modal.classList.add('active');
+  };
   window.deleteGoal = async (id) => {
     if(confirm("¿Seguro que quieres borrar esta meta?")) {
       await deleteDoc(doc(db, "goals", id));
@@ -462,9 +491,22 @@ import BottomNav from '../components/BottomNav.astro';
   };
 
   // Transaction form handlers
-  btnAdd.addEventListener('click', () => { modal.classList.add('active'); setTimeout(() => document.getElementById('txTitle').focus(), 100); });
-  btnReceive.addEventListener('click', () => { modal.classList.add('active'); btnIncomeType.click(); setTimeout(() => document.getElementById('txTitle').focus(), 100); });
-  btnClose.addEventListener('click', () => { modal.classList.remove('active'); form.reset(); });
+  btnAdd.addEventListener('click', () => { 
+    editingTxId = null; 
+    document.querySelector('.modal-title').textContent = 'Nueva Transacción'; 
+    submitBtn.textContent = 'Guardar Transacción'; 
+    modal.classList.add('active'); 
+    setTimeout(() => document.getElementById('txTitle').focus(), 100); 
+  });
+  btnReceive.addEventListener('click', () => { 
+    editingTxId = null; 
+    document.querySelector('.modal-title').textContent = 'Nueva Transacción'; 
+    submitBtn.textContent = 'Guardar Transacción'; 
+    modal.classList.add('active'); 
+    btnIncomeType.click(); 
+    setTimeout(() => document.getElementById('txTitle').focus(), 100); 
+  });
+  btnClose.addEventListener('click', () => { modal.classList.remove('active'); form.reset(); editingTxId = null; });
   typeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       typeBtns.forEach(b => b.classList.remove('active'));
@@ -489,9 +531,15 @@ import BottomNav from '../components/BottomNav.astro';
     const amountVal = parseFloat(document.getElementById('txAmount').value);
     
     if (title && !isNaN(amountVal)) {
-      await addTransaction({ title, category, amount: currentType === 'expense' ? -amountVal : amountVal, date: getFormattedDate(), userId: currentUser.uid });
+      const finalAmount = currentType === 'expense' ? -amountVal : amountVal;
+      if (editingTxId) {
+        await updateTransactionDb(editingTxId, { title, category, amount: finalAmount });
+      } else {
+        await addTransaction({ title, category, amount: finalAmount, date: getFormattedDate(), userId: currentUser.uid });
+      }
     }
     modal.classList.remove('active'); form.reset(); submitBtn.disabled = false; submitBtn.textContent = 'Guardar Transacción';
+    editingTxId = null;
   });
 
   // Goals handlers
