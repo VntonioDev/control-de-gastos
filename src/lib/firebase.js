@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, query, where, orderBy } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, query, where, orderBy, updateDoc } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 const firebaseConfig = {
@@ -85,6 +85,21 @@ export const deleteSubscriptionDb = async (id) => {
   }
 };
 
+export const goalsCol = collection(db, "goals");
+
+export const addGoal = async (goalData) => {
+  try {
+    const docRef = await addDoc(goalsCol, {
+      ...goalData,
+      createdAt: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error adding goal: ", error);
+    throw error;
+  }
+};
+
 // Exportamos utilidades para escuchar los cambios
-export { onSnapshot, query, where, orderBy };
-export { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, deleteDoc, doc };
+export { onSnapshot, query, where, orderBy, updateDoc };
+export { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, deleteDoc, doc, db };
